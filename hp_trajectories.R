@@ -26,12 +26,25 @@ if (!file.exists(preds_cache_location)) {
 preds_by_task <- readRDS(preds_cache_location)
 run_models    <- readRDS(run_models_merged_location)
 
+# Rashomon-set composition per task — useful for the talk's setup table
+message("Rashomon-set composition (n_models per family):")
+for (t in names(preds_by_task)) {
+  comp  <- table(preds_by_task[[t]]$learner)
+  parts <- sprintf("%s(%d)", names(comp), comp)
+  message("  ", t, ": ", paste(parts, collapse = ", "))
+}
+
 dir.create(hp_dir, showWarnings = FALSE, recursive = TRUE)
 
 # Columns that are not hyperparameters in run_models$torun.samples[[learner]]
 reserved_cols <- c("taskname", "score", "scores", "model.no", "id",
                    "iteration", "fold", "learnername", "row", "rn",
-                   "batch.id", "trial.no", "repl")
+                   "batch.id", "trial.no", "repl",
+                   # performance + diagnostic columns
+                   "rmse", "rmse.se", "bbrier", "bbrier.se",
+                   "score.se", "filename",
+                   "mse", "mse.se", "acc", "acc.se",
+                   "ce", "ce.se", "auc", "auc.se")
 
 # Loop variable name avoids the "taskname" column on hp_table — otherwise
 # data.table's i-expression cannot disambiguate column vs. variable.
@@ -74,6 +87,9 @@ for (task_name in names(preds_by_task)) {
     hp_rows <- hp_task[fam_model_no]
 
     candidate_cols <- setdiff(colnames(hp_rows), reserved_cols)
+    # config.* columns duplicate the tuned parameters on a linear scale; the
+    # tuned (log-scaled) versions are more informative for the manifold story.
+    candidate_cols <- candidate_cols[!startsWith(candidate_cols, "config.")]
     hp_cols <- candidate_cols[vapply(candidate_cols, function(cn) {
       length(unique(hp_rows[[cn]])) > 1
     }, logical(1))]
