@@ -2,151 +2,150 @@ source("init.R")
 
 #### settings #################################################################
 
-# run_models_merged location
-run_models_merged_location = "data/run_models_merged.rds"
+run_models_merged_location <- "data/run_models_merged.rds"
+preds_cache_location       <- "data/preds_cache.rds"
+figures_dir                <- "figures"
 
 # Rashomon set epsilon
-RS_epsilon = 0.01
-distance_metrics = c("euclidean", "manhattan")
+RS_epsilon       <- 0.01
+distance_metrics <- c("euclidean", "manhattan")
 
-## Batchtools
-regr = getRegistry(regpath = "/media/external/ewaldf/paper_2025_joint_model_importance", make.default = TRUE)
-# writeable = TRUE (default) only in one window !!!!
-
-# Define Cluster-Configurations
-regr$cluster.functions = makeClusterFunctionsSocket(ncpus = 30)
+dir.create(figures_dir, showWarnings = FALSE)
 
 #### prerequisites ############################################################
 
 # performance and SVM kernel specification
-perfor_and_kernel = get_performance_and_SVMkernel(run_models_merged_location)
-performance = perfor_and_kernel$performance
-kernel = perfor_and_kernel$kernel
+perfor_and_kernel <- get_performance_and_SVMkernel(run_models_merged_location)
+performance <- perfor_and_kernel$performance
+kernel      <- perfor_and_kernel$kernel
 rm(perfor_and_kernel)
 
-# get model indices of Rashomon set per task
-RS = get_RS(RS_epsilon, performance, vic)
-RS_size = data.table(length = unlist(lapply(RS, FUN = length)))
-RS_size$task = names(RS)
-RS_size$cum_len = cumsum(RS_size$length)
+# model indices of Rashomon set per task
+RS <- get_RS(RS_epsilon, performance, vic)
 
+#### compute predictions (batchtools, cached to disk) #########################
+# Computing predictions for every Rashomon-set model is the expensive step.
+# Once cached, downstream iteration on distances / clustering / plots needs
+# no cluster access. Delete preds_cache_location to force a recompute.
 
-#### calculate distance metrics ###############################################
-# Define Problem
-addProblem("fromlist", fun = function(data, job, taskname) {
-  task = list.tasks[[taskname]]
-  # model = readRDS("/media/external/rashomon/datafiles/st/tree/samplemodel_tree_st_0001.rds")
-  
-  # Fix logical features (for FeatureImp)
-  if(taskname == "bs"){
-    task_data = as.data.frame(task$data())
-    task_id = task$id
-    task_target = task$target_names
-    for(i in seq_along(task_data)) {
-      if (is.logical(task_data[[i]])) task_data[[i]] = as.factor(task_data[[i]])
+if (file.exists(preds_cache_location)) {
+  message("Loading cached predictions from ", preds_cache_location)
+  preds_by_task <- readRDS(preds_cache_location)
+} else {
+  regr <- getRegistry(
+    regpath      = "/media/external/ewaldf/paper_2025_joint_model_importance",
+    make.default = TRUE
+  )
+  # writeable = TRUE (default) only in one window !!!!
+  regr$cluster.functions <- makeClusterFunctionsSocket(ncpus = 30)
+
+  addProblem("fromlist", fun = function(data, job, taskname) {
+    task <- list.tasks[[taskname]]
+    if (taskname == "bs") task <- fix_bs_task_for_featureimp(task)
+    generateCanonicalDataSplits(task, ratio = 2 / 3, seed = 1)$validation
+  })
+
+  addAlgorithm("calculate_preds", fun = function(data, instance, job, learnername, model.no) {
+    taskname <- job$pars$prob.pars$taskname
+    model_path <- sprintf(
+      "/media/external/rashomon/datafiles/%s/%s/samplemodel_%s_%s_%04d.rds",
+      taskname, learnername, learnername, taskname, model.no
+    )
+    model <- readRDS(model_path)
+
+    if (taskname == "bs") model <- fix_bs_model_for_predict(model, instance)
+
+    if (instance$task_type == "classif") {
+      if (model$predict_type != "prob") model$predict_type <- "prob"
+      # binary tasks (gc, cs): one prob column suffices (the other is 1 - x)
+      model$predict(instance)$prob[, 2]
+    } else {
+      model$predict(instance)$response
     }
-    task = as_task_regr(task_data, target = task_target, id = task_id)
-  }
-  
-  # Return of the validation split
-  generateCanonicalDataSplits(task, ratio = 2 / 3, seed = 1)$validation
-})
+  })
 
-# Define Algorithm for VIC calculation based on PFI
-addAlgorithm("calculate_preds", fun = function(data, instance, job, learnername, model.no) {
-  # browser()
-  name = sprintf("/media/external/rashomon/datafiles/%s/%s/samplemodel_%s_%s_%04d.rds",
-                 job$pars$prob.pars$taskname, learnername, learnername, job$pars$prob.pars$taskname, model.no)
-  model = readRDS(name)
-  
-  # Fix models in case of task bs (logical features)
-  if(job$pars$prob.pars$taskname == "bs"){
-    # fix model
-    holiday.special = ppl("convert_types", "factor", "logical", selector_name(c("holiday", "working_day")), id = "holiday.special")
-    invisible(holiday.special$train(instance)) # list.tasks$bs))
-    xstate = model$state
-    gr = holiday.special$clone(deep = TRUE) %>>% model$clone(deep = TRUE)
-    lr = as_learner(gr$clone(deep = TRUE))
-    lr$state = xstate
-    lr$state$train_task = instance$clone(deep = TRUE)$filter(0)
-    lr$model = gr$state
-    lr$model[[gr$ids()[[2]]]] = xstate
-    model = lr
-    rm(gr, lr, xstate, holiday.special)
-  }
-  
-  # Calculate predictions
-  model$predict(instance)$response
-})
+  pred_design <- rbindlist(
+    lapply(names(RS), function(i) design[rn == i][RS[[i]]])
+  )
 
-pred_design = design[0]
-for(i in names(RS)){#
-  subset = design[rn == i]
-  pred_design = rbind(pred_design, subset[RS[[i]],])
+  addExperiments(
+    prob.designs = list(fromlist = data.table(taskname = pred_design$rn)),
+    algo.designs = list(calculate_preds = pred_design[, -"rn"]),
+    repls        = 1,
+    combine      = "bind"
+  )
+
+  submitJobs(findErrors())
+  submitJobs()
+  waitForJobs()
+
+  res <- unwrap(
+    ijoin(
+      getJobPars(),
+      reduceResultsDataTable(fun = function(x) list(res = x))
+    ),
+    sep = "."
+  )
+
+  # one entry per task: matrix (row = model, col = validation observation)
+  # plus the learner / model.no vectors so we can colour plots by learner.
+  preds_by_task <- lapply(split(res, by = "taskname"), function(rres) {
+    preds_mat <- do.call(rbind, rres$result.res)
+    rownames(preds_mat) <- sprintf("%s_m%d", rres$learnername, rres$model.no)
+    list(
+      preds    = preds_mat,
+      learner  = rres$learnername,
+      model_no = rres$model.no
+    )
+  })
+
+  saveRDS(preds_by_task, preds_cache_location)
+  message("Saved predictions to ", preds_cache_location)
 }
 
-addExperiments(
-  prob.designs = list(fromlist = data.table(taskname = pred_design$rn)),
-  algo.designs = list(calculate_preds = pred_design[,-"rn"]),
-  repls = 1,
-  combine = "bind"
-)
+#### distances, clustering & visualisation ####################################
+# For each task × distance metric, compute the pairwise behavioural distance
+# between Rashomon-set models (rows = models, cols = validation observations)
+# and visualise it three ways: hierarchical clustering, classical MDS,
+# partitioning around medoids.
 
-test = testJob(31)
-length(test)
+for (taskname in names(preds_by_task)) {
+  td <- preds_by_task[[taskname]]
+  learner_factor <- factor(td$learner)
 
-submitJobs(findErrors())
-submitJobs()
-waitForJobs()
+  for (metric in distance_metrics) {
+    dist_mat <- dist(td$preds, method = metric)
 
-# extract results
-res = ijoin(
-  getJobPars(),
-  reduceResultsDataTable(fun = function(x) list(res = x))
-)
-res = unwrap(res, sep = ".")
-rres = res$result.res
-preds = list()
-for(i in 1:length(RS_size$length)){
-  if(i == 1){
-    preds[[RS_size$task[i]]] = data.frame(t(sapply(rres[1:RS_size$cum_len[i]], 
-                                                   function(x) x[1:max(lengths(rres[1:RS_size$cum_len[i]]))])))
-  } else {
-    preds[[RS_size$task[i]]] = data.frame(t(sapply(rres[(RS_size$cum_len[i-1]+1):RS_size$cum_len[i]], 
-                                                   function(x) x[1:max(lengths(rres[(RS_size$cum_len[i-1]+1):RS_size$cum_len[i]]))])))
+    # hierarchical clustering dendrogram
+    pdf(file.path(figures_dir, sprintf("dendrogram_%s_%s.pdf", taskname, metric)),
+        width = 9, height = 6)
+    plot(hclust(dist_mat), hang = -1,
+         main = sprintf("Hierarchical clustering — %s (%s)", taskname, metric),
+         xlab = "model", sub = "", cex = 0.6)
+    dev.off()
+
+    # classical (metric) MDS, coloured by learner family
+    mds <- cmdscale(dist_mat, k = 2, eig = TRUE)
+    pdf(file.path(figures_dir, sprintf("mds_%s_%s.pdf", taskname, metric)),
+        width = 7, height = 6)
+    plot(mds$points, type = "n",
+         xlab = "MDS 1", ylab = "MDS 2", asp = 1,
+         main = sprintf("Classical MDS — %s (%s)", taskname, metric))
+    points(mds$points,
+           col = as.integer(learner_factor), pch = 19, cex = 0.9)
+    legend("topright",
+           legend = levels(learner_factor),
+           col    = seq_len(nlevels(learner_factor)),
+           pch    = 19, bty = "n")
+    dev.off()
+
+    # PAM, k = 2 placeholder — tune via silhouette in a later iteration
+    pam_res <- cluster::pam(dist_mat, k = 2, metric = metric)
+    pdf(file.path(figures_dir, sprintf("pam_%s_%s.pdf", taskname, metric)),
+        width = 9, height = 5)
+    plot(pam_res, main = sprintf("PAM clustering — %s (%s)", taskname, metric))
+    dev.off()
   }
 }
 
-test = preds$bs
-rownames(test) = paste0("m", RS$bs)
-dist_test = dist(test, method = distance_metrics[1])
-plot(hclust(dist_test), hang = -1, main = "Cluster Dendrogram bs") # to see a dendrogram of clustered variables
-
-# hc <- hclust(dist_test)
-# memb <- cutree(hc, k = 10)
-# cent <- NULL
-# for(k in 1:10){
-#   cent <- rbind(cent, colMeans(test[memb == k, , drop = FALSE]))
-# }
-# hc1 <- hclust(dist(cent, method = distance_metrics[1]), members = table(memb))
-# par(mfrow = c(1, 2))
-# plot(hc, hang = -1, main = "Original Tree")
-# plot(hc1, hang = -1, main = "Re-start from 10 clusters")
-# par(mfrow = c(1, 1))
-
-
-#### Classical (Metric) Multidimensional Scaling ##############################
-
-cmd_test = cmdscale(dist_test, k = 2, eig = TRUE)
-x = cmd_test$points[,1]
-y = cmd_test$points[,2]
-plot(x, y, type = "n", xlab = "", ylab = "", asp = 1, axes = FALSE,
-     main = "cmdscale(bs)")
-text(x, y, rownames(test), cex = 0.6)
-
-
-
-#### Partitioning (Clustering) Around Medoids #################################
-
-pam_test = cluster::pam(dist_test, k = 2, metric = distance_metrics[1])
-plot(pam_test)
+message("Wrote plots to ", figures_dir, "/")
