@@ -79,23 +79,27 @@ if (file.exists(preds_cache_location)) {
   submitJobs()
   waitForJobs()
 
-  res <- unwrap(
-    ijoin(
-      getJobPars(),
-      reduceResultsDataTable(fun = function(x) list(res = x))
-    ),
-    sep = "."
+  res <- ijoin(
+    getJobPars(),
+    reduceResultsDataTable(fun = function(x) list(res = x))
   )
+
+  # Pull values out of the nested prob.pars / algo.pars / result list-columns
+  # directly. Avoids depending on unwrap()'s column-naming behaviour.
+  taskname_col <- sapply(res$prob.pars, `[[`, "taskname")
+  learner_col  <- sapply(res$algo.pars, `[[`, "learnername")
+  model_no_col <- sapply(res$algo.pars, `[[`, "model.no")
+  pred_list    <- lapply(res$result,    `[[`, "res")
 
   # one entry per task: matrix (row = model, col = validation observation)
   # plus the learner / model.no vectors so we can colour plots by learner.
-  preds_by_task <- lapply(split(res, by = "taskname"), function(rres) {
-    preds_mat <- do.call(rbind, rres$result.res)
-    rownames(preds_mat) <- sprintf("%s_m%d", rres$learnername, rres$model.no)
+  preds_by_task <- lapply(split(seq_along(taskname_col), taskname_col), function(idx) {
+    preds_mat <- do.call(rbind, pred_list[idx])
+    rownames(preds_mat) <- sprintf("%s_m%s", learner_col[idx], model_no_col[idx])
     list(
       preds    = preds_mat,
-      learner  = rres$learnername,
-      model_no = rres$model.no
+      learner  = learner_col[idx],
+      model_no = model_no_col[idx]
     )
   })
 
