@@ -102,11 +102,11 @@
 % -----------------------------------------------------------------
 \begin{frame}{MDS view --- all four tasks}
   \centering
-  \begin{tabular}{cc}
-    \includegraphics[width=0.42\textwidth]{../figures/mds_gc_euclidean.pdf} &
-    \includegraphics[width=0.42\textwidth]{../figures/mds_cs_euclidean.pdf} \\[0.5ex]
-    \includegraphics[width=0.42\textwidth]{../figures/mds_bs_euclidean.pdf} &
-    \includegraphics[width=0.42\textwidth]{../figures/mds_st_euclidean.pdf} \\
+  \begin{tabular}{@{}c@{\hspace{1ex}}c@{}}
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/mds_gc_euclidean.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/mds_cs_euclidean.pdf} \\[-1ex]
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/mds_bs_euclidean.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/mds_st_euclidean.pdf}
   \end{tabular}
 \end{frame}
 
@@ -122,9 +122,10 @@
 % -----------------------------------------------------------------
 \begin{frame}{Within-family structure I --- \texttt{st}\,/\,\texttt{nnet}}
   \centering
-  \includegraphics[width=0.82\textwidth]{../figures/hp_trajectories/hp_vs_mds1_st_nnet.pdf}\\[0.5ex]
-  \footnotesize Each panel: 1D within-family MDS coordinate vs.\ one hyperparameter.
+  \includegraphics[width=0.95\textwidth,height=0.55\textheight,keepaspectratio]{../figures/hp_trajectories/hp_vs_mds1_st_nnet.pdf}\\[0.5ex]
+  \footnotesize
   \begin{itemize}
+    \item Each panel: 1D within-family MDS coordinate vs.\ one hyperparameter.
     \item The within-family manifold \textbf{is the \texttt{decay} axis} --- near-monotone mapping.
     \item \texttt{size} and \texttt{skip} have no effect on behavioural position.
   \end{itemize}
@@ -133,9 +134,10 @@
 % -----------------------------------------------------------------
 \begin{frame}{Within-family structure II --- \texttt{cs}\,/\,\texttt{tree}}
   \centering
-  \includegraphics[width=0.82\textwidth]{../figures/hp_trajectories/hp_vs_mds1_cs_tree.pdf}\\[0.5ex]
-  \footnotesize Same construction --- within-family MDS coordinate vs.\ \texttt{cp}, \texttt{minbucket}, \texttt{minsplit}.
+  \includegraphics[width=0.95\textwidth,height=0.55\textheight,keepaspectratio]{../figures/hp_trajectories/hp_vs_mds1_cs_tree.pdf}\\[0.5ex]
+  \footnotesize
   \begin{itemize}
+    \item Within-family MDS coordinate vs.\ \texttt{cp}, \texttt{minbucket}, \texttt{minsplit}.
     \item Trees on COMPAS are \textbf{bimodal}: a tight cluster at MDS\,1 $\approx 8$ and a diffuse population below zero.
     \item \emph{No single tuned hyperparameter} separates the two modes --- a discrete behavioural split that tuning alone does not reach.
   \end{itemize}
