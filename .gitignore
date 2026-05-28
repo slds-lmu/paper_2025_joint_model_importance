@@ -50,4 +50,3 @@ rsconnect/
 
 # project-specific
 data/preds_cache.rds
-figures/
