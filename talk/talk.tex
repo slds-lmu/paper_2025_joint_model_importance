@@ -6,10 +6,39 @@
 \definecolor{lmugreen}{RGB}{0, 136, 58}
 \usecolortheme[named=lmugreen]{structure}
 
+% Hide the slide-navigation buttons in the footer
+\setbeamertemplate{navigation symbols}{}
+
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{tikz}
+
+% Packages required by latex-math
+\usepackage{mathtools}
+\usepackage{bm}
+\usepackage{dsfont}
+\usepackage{xspace}
+\usepackage{xifthen}
+
+% slds-lmu notation conventions
+\input{../latex-math/basic-math}
+\input{../latex-math/basic-ml}
+
+% Rashomon set — no macro exists in latex-math; carries an
+% epsilon subscript to disambiguate from \risk (= \mathcal{R}).
+\newcommand{\Rset}{\mathcal{R}_\varepsilon}
+
+% Place LMU + MCML logos in the upper-right corner of every titled frame.
+\addtobeamertemplate{frametitle}{}{%
+  \begin{tikzpicture}[remember picture, overlay]
+    \node[anchor=north east, xshift=-4pt, yshift=4pt]
+      at (current page.north east)
+      {\includegraphics[height=0.55cm]{../logos/lmu.png}\hspace{2pt}%
+       \includegraphics[height=0.55cm]{../logos/mcml.jpg}};
+  \end{tikzpicture}%
+}
 
 \title[Joint Model Importance]{Joint Model Importance via the Rashomon Set}
 \subtitle{Behavioural Comparison of Near-Equally-Good Models}
@@ -17,28 +46,41 @@
 \institute[LMU/MCML]{LMU Munich \,\textbullet\, MCML}
 \date{\today}
 
-\titlegraphic{%
-  \includegraphics[height=1.4cm]{../logos/lmu.png}\hspace{2em}%
-  \includegraphics[height=1.4cm]{../logos/mcml.jpg}%
-}
-
 \begin{document}
 
 % -----------------------------------------------------------------
-\begin{frame}
-  \titlepage
+% Custom title slide: logos above the title, manual layout so we
+% can control the order (\titlepage puts \titlegraphic at the bottom).
+\begin{frame}[plain]
+  \vspace*{0.3cm}
+  \begin{center}
+    \includegraphics[height=0.9cm]{../logos/lmu.png}\hspace{1.5em}%
+    \includegraphics[height=0.9cm]{../logos/mcml.jpg}
+  \end{center}
+  \vspace{0.6cm}
+  \begin{center}
+    {\Large\color{lmugreen}\textbf{Joint Model Importance via the Rashomon Set}}\\[0.3em]
+    {\large Behavioural Comparison of Near-Equally-Good Models}
+  \end{center}
+  \vfill
+  \begin{center}
+    {\large Fiona K.~Ewald}\\[0.4em]
+    LMU Munich \,\textbullet\, MCML\\[0.4em]
+    \today
+  \end{center}
+  \vspace*{0.4cm}
 \end{frame}
 
 % -----------------------------------------------------------------
 \begin{frame}{Beyond the single best model}
   \begin{itemize}
     \item In tabular ML, many models reach indistinguishable predictive performance.
-    \item The \emph{Rashomon set}
-      \(
-        \mathcal{R}_\varepsilon \;=\; \bigl\{\, m \,:\, \mathrm{score}(m) \le \mathrm{score}(m^{*}) \cdot (1 + \varepsilon) \,\bigr\}
-      \)
+    \item For a tolerance $\varepsilon$, the \emph{Rashomon set}
+      \[
+        \Rset \;=\; \bigl\{\, \fhDlam \,:\, \mathrm{score}(\fhDlam) \le \mathrm{score}(\fhDlams) \cdot (1+\varepsilon),\ \lamv \in \Lam \,\bigr\}
+      \]
       collects every model within $\varepsilon$ of the best.
-    \item Members of $\mathcal{R}_\varepsilon$ can disagree substantially on individual predictions and on feature importance.
+    \item Members of $\Rset$ can disagree substantially on individual predictions and on feature importance.
     \item \textbf{Question.} How are these equally good models related to one another, and what does the collective tell us beyond the single best?
   \end{itemize}
 \end{frame}
@@ -46,9 +88,9 @@
 % -----------------------------------------------------------------
 \begin{frame}{Pipeline}
   \begin{enumerate}
-    \item For every $m \in \mathcal{R}_\varepsilon$, compute predictions on a held-out 2/3 validation split.
+    \item For every $\fhDlam \in \Rset$, compute the prediction vector $\hat{\yv}_{\lamv}$ on a held-out 2/3 validation split.
     \item Build the pairwise \emph{behavioural distance} matrix
-      \( d_{ij} \;=\; \|\hat y_i - \hat y_j\|_p \).
+      \( d_{ij} \;=\; \|\hat{\yv}_i - \hat{\yv}_j\|_p \).
     \item View the matrix three ways:
       \begin{itemize}
         \item hierarchical clustering (\texttt{hclust})
@@ -57,7 +99,7 @@
       \end{itemize}
   \end{enumerate}
   \vspace{1ex}
-  \footnotesize Predictions are class probabilities for classification, $\hat y$ for regression. Distances computed for both Euclidean and Manhattan; results shown are Euclidean (Manhattan tells the same story).
+  \footnotesize Predictions are class probabilities for classification, $\fh(\xv)$ for regression. Distances computed for both Euclidean and Manhattan; results shown are Euclidean (Manhattan tells the same story).
 \end{frame}
 
 % -----------------------------------------------------------------
@@ -96,7 +138,7 @@
     \end{tabular}
   \end{table}
   \vspace{1ex}
-  \textbf{First finding.} At $\varepsilon = 1\%$ only one or two learner families survive per task --- \emph{learner choice} is the first dimension of disagreement inside $\mathcal{R}_\varepsilon$.
+  \textbf{First finding.} At $\varepsilon = 1\%$ only one or two learner families survive per task --- \emph{learner choice} is the first dimension of disagreement inside $\Rset$.
 \end{frame}
 
 % -----------------------------------------------------------------
@@ -139,7 +181,7 @@
   \begin{itemize}
     \item Within-family MDS coordinate vs.\ \texttt{cp}, \texttt{minbucket}, \texttt{minsplit}.
     \item Trees on COMPAS are \textbf{bimodal}: a tight cluster at MDS\,1 $\approx 8$ and a diffuse population below zero.
-    \item \emph{No single tuned hyperparameter} separates the two modes --- a discrete behavioural split that tuning alone does not reach.
+    \item \emph{No single tuned hyperparameter} separates the two modes. \textbf{Speculation:} a discrete behavioural split driven by structure (e.g.\ root split, depth) that hyperparameter tuning does not reach --- to be confirmed.
   \end{itemize}
 \end{frame}
 
@@ -152,7 +194,7 @@
         \item Where on the family's behavioural manifold does it sit?
       \end{enumerate}
     \item Across every task observed, learner choice is the first axis of disagreement --- not hyperparameter setting.
-    \item Within-family structure can be smooth and HP-aligned (\texttt{st}/\texttt{nnet} $\sim$ \texttt{decay}) or discrete and HP-orthogonal (\texttt{cs}/\texttt{tree}).
+    \item Within-family structure can be smooth and HP-aligned (\texttt{st}/\texttt{nnet} $\sim$ \texttt{decay}) or discrete and HP-orthogonal (\texttt{cs}/\texttt{tree}; \emph{causal mechanism still speculative}).
   \end{itemize}
 \end{frame}
 
@@ -161,7 +203,7 @@
   \begin{itemize}
     \item \textbf{$\varepsilon$ sensitivity.} How does family composition shift as the Rashomon tolerance opens?
     \item \textbf{Feature-importance distance.} Compare behavioural distance with a distance built from VIC --- do the clusters agree?
-    \item \textbf{Choose $k$ for PAM via silhouette}, then read out the medoids as ``representative'' members of the Rashomon set.
+    \item \textbf{Choose $k$ for PAM via silhouette}, then read out the medoids as ``representative'' members of $\Rset$.
     \item \textbf{Disagreement map.} Where in feature space do Rashomon-set models disagree the most?
     \item \textbf{Discrete tree mode on \texttt{cs}.} Is the bimodality driven by structural differences (root split, depth) that hyperparameters do not capture?
   \end{itemize}
@@ -169,6 +211,12 @@
 
 % -----------------------------------------------------------------
 \begin{frame}
+  \begin{tikzpicture}[remember picture, overlay]
+    \node[anchor=north east, xshift=-4pt, yshift=-4pt]
+      at (current page.north east)
+      {\includegraphics[height=0.55cm]{../logos/lmu.png}\hspace{2pt}%
+       \includegraphics[height=0.55cm]{../logos/mcml.jpg}};
+  \end{tikzpicture}%
   \centering \vfill
   {\Huge Thank you.}\\[1em]
   {\Large Questions?}
