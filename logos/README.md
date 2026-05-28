@@ -3,8 +3,9 @@
 Drop the institutional logo files here for the Beamer slides:
 
 - `lmu.pdf` (or `.png`) — LMU Munich logo
-- `mcml.pdf` (or `.png`) — MCML logo
+- `mcml.jpg` — MCML logo
 
-Vector formats (PDF) are preferred for LaTeX; PNG works as well. The
-Beamer template will reference these filenames literally, so please
-keep the names as listed above.
+The Beamer template references these filenames literally, so please
+keep the names and extensions as listed above. Vector formats (PDF)
+are preferred for the LMU logo if available; `pdflatex` handles PNG
+and JPG without issue.
