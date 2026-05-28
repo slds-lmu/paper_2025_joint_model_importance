@@ -50,3 +50,7 @@ rsconnect/
 
 # project-specific
 data/preds_cache.rds
+
+# latex-math is a separate slds-lmu repo, cloned per-developer
+# (see https://github.com/slds-lmu/latex-math)
+latex-math/
