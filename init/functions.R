@@ -1,3 +1,36 @@
+#### fix bs task: FeatureImp does not handle logical features, convert to factor ####
+fix_bs_task_for_featureimp <- function(task) {
+  task_data <- as.data.frame(task$data())
+  task_id <- task$id
+  task_target <- task$target_names
+  for (i in seq_along(task_data)) {
+    if (is.logical(task_data[[i]])) task_data[[i]] <- as.factor(task_data[[i]])
+  }
+  as_task_regr(task_data, target = task_target, id = task_id)
+}
+
+#### wrap bs model with a factor->logical pipeline ####
+# bs models were trained on logical holiday / working_day columns. Once we
+# convert those to factor (see fix_bs_task_for_featureimp), the saved model
+# cannot predict directly — the convert_types pipeop converts them back so
+# the underlying learner sees what it was trained on.
+fix_bs_model_for_predict <- function(model, instance) {
+  holiday_special <- ppl(
+    "convert_types", "factor", "logical",
+    selector_name(c("holiday", "working_day")),
+    id = "holiday.special"
+  )
+  invisible(holiday_special$train(instance))
+  xstate <- model$state
+  gr <- holiday_special$clone(deep = TRUE) %>>% model$clone(deep = TRUE)
+  lr <- as_learner(gr$clone(deep = TRUE))
+  lr$state <- xstate
+  lr$state$train_task <- instance$clone(deep = TRUE)$filter(0)
+  lr$model <- gr$state
+  lr$model[[gr$ids()[[2]]]] <- xstate
+  lr
+}
+
 #### get performance and SVM kernel specification ####
 get_performance_and_SVMkernel = function(file_location){
   # file_location: file location within the repository for a ".rds" file 
