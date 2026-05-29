@@ -23,6 +23,8 @@ performance <- build_performance_from_res_dt(res_dt,
 RS <- get_RS(RS_epsilon, performance, vic)
 
 # Rashomon-set composition per task, useful sanity check
+message("Learner set (auto-detected from VIC): ",
+        paste(learner.keys, collapse = ", "))
 message("Rashomon-set sizes (n_models per task):")
 for (t in names(RS)) {
   message(sprintf("  %s: %d", t, length(RS[[t]])))
