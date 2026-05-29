@@ -22,6 +22,12 @@ performance <- build_performance_from_res_dt(res_dt,
                                               learners = learner.keys)
 RS <- get_RS(RS_epsilon, performance, vic)
 
+# Rashomon-set composition per task, useful sanity check
+message("Rashomon-set sizes (n_models per task):")
+for (t in names(RS)) {
+  message(sprintf("  %s: %d", t, length(RS[[t]])))
+}
+
 #### prediction extraction ####################################################
 # Predictions on the held-out validation split are pre-computed by the
 # upstream pred_mult.R pipeline in paper_2024_rashomon_set and live in
@@ -50,6 +56,7 @@ if (file.exists(preds_cache_location)) {
 
   preds_by_task <- lapply(names(RS), function(task_name) {
     rs_rows <- design[rn == task_name][RS[[task_name]]]
+    if (nrow(rs_rows) == 0) return(NULL)
     pred_mat <- do.call(rbind, lapply(seq_len(nrow(rs_rows)), function(i) {
       extract_pred_vec(preds[[task_name]][[rs_rows$learnername[i]]][[rs_rows$model.no[i]]])
     }))
@@ -62,6 +69,7 @@ if (file.exists(preds_cache_location)) {
     )
   })
   names(preds_by_task) <- names(RS)
+  preds_by_task <- preds_by_task[!sapply(preds_by_task, is.null)]
 
   saveRDS(preds_by_task, preds_cache_location)
   message("Saved predictions to ", preds_cache_location)
@@ -77,6 +85,11 @@ if (file.exists(preds_cache_location)) {
 
 for (task_name in names(preds_by_task)) {
   td <- preds_by_task[[task_name]]
+  if (nrow(td$preds) < 2) {
+    message(task_name, ": only ", nrow(td$preds),
+            " RS member(s) -- cannot cluster, skipping")
+    next
+  }
   learner_factor <- factor(td$learner)
 
   for (metric in distance_metrics) {

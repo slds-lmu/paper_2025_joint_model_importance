@@ -72,7 +72,9 @@ get_RS = function(epsilon, performance, vic){
   #      den übrigen Spalten pro Modell die passenden feature importance Werte.
   #      Die Spalten müssen das Format pfi_[modell]_m[modellnummer] haben, z.B.:
   #      pfi_tree_m1
-  best_performance = apply(sapply(performance, sapply, min),2,min)
+  # min(numeric(0)) returns Inf with a warning -- harmless for tasks where
+  # a learner produced no models, but the warnings are noisy.
+  best_performance = suppressWarnings(apply(sapply(performance, sapply, min), 2, min))
   task.keys = names(vic)
   learner.keys = unique(as.vector(sapply(performance, 
                                          function(x) names(x))))
