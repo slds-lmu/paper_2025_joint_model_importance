@@ -49,7 +49,11 @@ po/*~
 rsconnect/
 
 # project-specific
-data/preds_cache.rds
+# Data files are managed per-machine (cluster generates them, Windows copies
+# them locally); never tracked in git -- they are large and would diverge
+# from whichever generation is current.
+data/*.RData
+data/*.rds
 
 # latex-math is a separate slds-lmu repo, cloned per-developer
 # (see https://github.com/slds-lmu/latex-math)
