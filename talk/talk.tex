@@ -239,6 +239,24 @@
 \end{frame}
 
 % -----------------------------------------------------------------
+\begin{frame}{Letting PAM choose $k$ freely --- \texttt{st}}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \includegraphics[width=\linewidth]{../figures/clusters/mds_clusters_compare_st_euclidean.pdf}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \footnotesize
+      \begin{itemize}
+        \item Silhouette-tuned PAM picks $k^{\ast} = 3$ for \texttt{st} in \emph{both} views, not 2.
+        \item \textbf{Behavioural:} PAM splits the \texttt{nnet} manifold along the \texttt{decay} axis into two clusters --- the within-family structure is discrete enough to read as its own cluster.
+        \item \textbf{VIC:} a different $k^{\ast} = 3$ that cuts \emph{across} the family colouring --- importance has its own organisation, not just a collapsed copy of behaviour.
+        \item Family identity is therefore neither necessary nor sufficient to recover the unsupervised cluster structure.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------
 \begin{frame}{First interpretation}
   \begin{itemize}
     \item Within $\Rset$, \textbf{behaviour has two-level structure:} learner family + position on the family's behavioural manifold.
@@ -305,6 +323,18 @@
     \item \textbf{Classical MDS} (\texttt{cmdscale}, $k = 2$): eigendecomposition of the double-centred squared distance matrix, top-$k$ eigenvectors as coordinates. Each model becomes a point in $\R^k$ whose pairwise Euclidean distances approximate $\mathbf{D}$. For Euclidean $\mathbf{D}$ \textbf{equivalent to PCA} up to sign and rotation.
     \item \textbf{Partitioning around medoids} (\texttt{cluster::pam}): pick $k$ medoids (representative models) minimising the total distance from each model to its nearest medoid. Robust analogue of $k$-means for arbitrary distance matrices; best $k$ via average silhouette width.
   \end{itemize}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- silhouette scans (Euclidean)}
+  \centering
+  \begin{tabular}{@{}c@{\hspace{1ex}}c@{}}
+    \includegraphics[height=0.38\textheight,keepaspectratio]{../figures/clusters/silhouette_gc_euclidean.pdf} &
+    \includegraphics[height=0.38\textheight,keepaspectratio]{../figures/clusters/silhouette_cs_euclidean.pdf} \\[-1ex]
+    \includegraphics[height=0.38\textheight,keepaspectratio]{../figures/clusters/silhouette_bs_euclidean.pdf} &
+    \includegraphics[height=0.38\textheight,keepaspectratio]{../figures/clusters/silhouette_st_euclidean.pdf}
+  \end{tabular}\\[0.3ex]
+  {\footnotesize Avg.\ silhouette width over $k = 2, \ldots, 10$. Behavioural (left) and VIC (right) per task; red dashed line marks $k^{\ast}$.}
 \end{frame}
 
 \end{document}
