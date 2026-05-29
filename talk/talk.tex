@@ -75,11 +75,12 @@
 \begin{frame}{Beyond the single best model}
   \begin{itemize}
     \item In tabular ML, many models reach indistinguishable predictive performance.
-    \item For a tolerance $\varepsilon$, the \emph{Rashomon set}
+    \item For a tolerance $\varepsilon > 0$, the \emph{Rashomon set}
       \[
         \Rset \;=\; \bigl\{\, \fhDlam \,:\, \risk(\fhDlam) \le \risk(\fhDlams) \cdot (1+\varepsilon),\ \lamv \in \Lam \,\bigr\}
       \]
-      collects every model within $\varepsilon$ of the best.
+      collects every model within $\varepsilon$ of the best.\\[0.2em]
+      {\footnotesize Notation: $\fhDlam$ = model trained on data $\D$ with hyperparameter configuration $\lamv \in \Lam$; $\lamv^{\ast}$ = risk-minimising configuration; $\risk(\cdot)$ = (empirical) risk functional.}
     \item Members of $\Rset$ can disagree substantially on individual predictions and on feature importance.
     \item \textbf{Question.} How are these equally good models related to one another, and what does the collective tell us beyond the single best?
   \end{itemize}
@@ -89,17 +90,20 @@
 \begin{frame}{Pipeline}
   \begin{enumerate}
     \item For every $\fhDlam \in \Rset$, compute the prediction vector $\hat{\yv}_{\lamv}$ on a held-out 2/3 validation split.
-    \item Build the pairwise \emph{behavioural distance} matrix
-      \( d_{ij} \;=\; \|\hat{\yv}_i - \hat{\yv}_j\|_p \).
-    \item View the matrix three ways:
+    \item Build the pairwise \emph{behavioural distance} matrix $\mathbf{D}$ with entries
+      \[
+        d_{ij} \;=\; \|\hat{\yv}_i - \hat{\yv}_j\|_p \;=\; \Bigl(\sum_{o=1}^{n_{\text{val}}} \bigl|\hat y_{i,o} - \hat y_{j,o}\bigr|^p\Bigr)^{1/p},
+      \]
+      where $i, j$ index models in $\Rset$ and $o$ runs over the $n_{\text{val}}$ validation observations (see backup slide).
+    \item View $\mathbf{D}$ three ways:
       \begin{itemize}
         \item hierarchical clustering (\texttt{hclust})
-        \item classical MDS (\texttt{cmdscale}, $k = 2$)
+        \item classical MDS (\texttt{cmdscale}, embedding dimension $k = 2$)
         \item partitioning around medoids (\texttt{cluster::pam})
       \end{itemize}
   \end{enumerate}
-  \vspace{1ex}
-  \footnotesize Predictions are class probabilities for classification, $\fh(\xv)$ for regression. Distances computed for both Euclidean and Manhattan; results shown are Euclidean (Manhattan tells the same story).
+  \vspace{0.5ex}
+  {\footnotesize Predictions are class probabilities for classification, $\fh(\xv)$ for regression. Distances computed for both Euclidean ($p = 2$) and Manhattan ($p = 1$); results shown are Euclidean (Manhattan tells the same story).}
 \end{frame}
 
 % -----------------------------------------------------------------
@@ -203,7 +207,7 @@
   \begin{itemize}
     \item \textbf{$\varepsilon$ sensitivity.} How does family composition shift as the Rashomon tolerance opens?
     \item \textbf{Feature-importance distance.} Compare behavioural distance with a distance built from VIC --- do the clusters agree?
-    \item \textbf{Choose $k$ for PAM via silhouette}, then read out the medoids as ``representative'' members of $\Rset$.
+    \item \textbf{Choose the number of clusters $k$ for PAM via silhouette}, then read out the medoids as ``representative'' members of $\Rset$.
     \item \textbf{Disagreement map.} Where in feature space do Rashomon-set models disagree the most?
     \item \textbf{Discrete tree mode on \texttt{cs}.} Is the bimodality driven by structural differences (root split, depth) that hyperparameters do not capture?
   \end{itemize}
@@ -221,6 +225,31 @@
   {\Huge Thank you.}\\[1em]
   {\Large Questions?}
   \vfill
+\end{frame}
+
+% =================================================================
+\appendix
+
+\begin{frame}{Backup --- the behavioural distance matrix in detail}
+  Stack the Rashomon-set prediction vectors row-wise into a prediction matrix:
+  \[
+    \mathbf{P} \;=\;
+    \begin{pmatrix}
+      \hat y_{1,1} & \hat y_{1,2} & \cdots & \hat y_{1,n_{\text{val}}} \\
+      \hat y_{2,1} & \hat y_{2,2} & \cdots & \hat y_{2,n_{\text{val}}} \\
+      \vdots       & \vdots       &        & \vdots                    \\
+      \hat y_{n,1} & \hat y_{n,2} & \cdots & \hat y_{n,n_{\text{val}}}
+    \end{pmatrix}
+    \;\in\; \R^{n \times n_{\text{val}}}
+  \]
+  with one row per model in $\Rset$ (here $n = |\Rset|$) and one column per held-out validation observation (here $n_{\text{val}}$).
+
+  \vspace{0.5ex}
+  Row-wise $L_p$ distances collapse the observation axis and yield the symmetric matrix
+  \[
+    \mathbf{D} \in \R^{n \times n}, \qquad d_{ij} \;=\; \|\hat{\yv}_i - \hat{\yv}_j\|_p.
+  \]
+  {\footnotesize Rows / columns of $\mathbf{D}$ now index \emph{models}, not observations. Hence \textbf{one MDS point = one model}; the cloud sits in $\R^n$ and is visualised in $\R^2$ via \texttt{cmdscale}.}
 \end{frame}
 
 \end{document}
