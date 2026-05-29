@@ -165,3 +165,95 @@ if (!is.null(preds_by_task)) {
 }
 
 message("Wrote VIC plots to ", vic_dir, "/")
+
+#### cluster analysis: silhouette + PAM cluster colouring #####################
+# The earlier PAM calls hard-coded k = 2 -- a placeholder, not a finding.
+# Here we let PAM choose k via average silhouette width over k = 2..10, then
+# colour the MDS plots by the resulting cluster assignment. The natural
+# question for the talk: do unsupervised clusters coincide with learner
+# families, or do they cut across?
+
+cluster_dir <- file.path(figures_dir, "clusters")
+dir.create(cluster_dir, showWarnings = FALSE, recursive = TRUE)
+
+optimal_pam <- function(dist_mat, metric, k_grid) {
+  sil_scores <- vapply(k_grid, function(k) {
+    cluster::pam(dist_mat, k = k, metric = metric)$silinfo$avg.width
+  }, numeric(1))
+  best_k <- k_grid[which.max(sil_scores)]
+  list(
+    sil_scores = sil_scores,
+    best_k     = best_k,
+    pam        = cluster::pam(dist_mat, k = best_k, metric = metric)
+  )
+}
+
+if (!is.null(preds_by_task)) {
+  for (task_name in names(vic_by_task)) {
+    td <- vic_by_task[[task_name]]
+    pb <- preds_by_task[[task_name]]
+    if (is.null(td) || is.null(pb)) next
+    # cap k at n - 1; PAM needs at least 2 points per cluster
+    k_grid <- 2:min(10, nrow(td$imp) - 1)
+    if (length(k_grid) < 2) next
+
+    for (metric in distance_metrics) {
+      bh_d   <- dist(pb$preds, method = metric)
+      vc_d   <- dist(td$imp,   method = metric)
+      bh     <- optimal_pam(bh_d, metric, k_grid)
+      vc     <- optimal_pam(vc_d, metric, k_grid)
+      bh_mds <- cmdscale(bh_d, k = 2)
+      vc_mds <- cmdscale(vc_d, k = 2)
+
+      # silhouette scan: behavioural left, VIC right
+      pdf(file.path(cluster_dir, sprintf("silhouette_%s_%s.pdf", task_name, metric)),
+          width = 9, height = 4.5)
+      par(mfrow = c(1, 2), mar = c(4, 4, 3, 1))
+      plot(k_grid, bh$sil_scores, type = "b", pch = 19,
+           xlab = "k", ylab = "avg. silhouette width",
+           main = sprintf("Behavioural -- %s (%s)", task_name, metric))
+      abline(v = bh$best_k, lty = 2, col = "red")
+      plot(k_grid, vc$sil_scores, type = "b", pch = 19,
+           xlab = "k", ylab = "avg. silhouette width",
+           main = sprintf("VIC -- %s (%s)", task_name, metric))
+      abline(v = vc$best_k, lty = 2, col = "red")
+      dev.off()
+
+      # 2 x 2 panel: family vs PAM cluster colouring, behavioural vs VIC
+      bh_lf <- factor(pb$learner); vc_lf <- factor(td$learner)
+      bh_cl <- factor(bh$pam$clustering); vc_cl <- factor(vc$pam$clustering)
+
+      pdf(file.path(cluster_dir, sprintf("mds_clusters_compare_%s_%s.pdf", task_name, metric)),
+          width = 13, height = 10)
+      par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
+      plot(bh_mds, col = as.integer(bh_lf), pch = 19, cex = 0.9, asp = 1,
+           xlab = "MDS 1", ylab = "MDS 2",
+           main = sprintf("Behavioural -- coloured by family (%s)", task_name))
+      legend("topright", legend = levels(bh_lf),
+             col = seq_len(nlevels(bh_lf)), pch = 19, bty = "n", cex = 0.8)
+      plot(vc_mds, col = as.integer(vc_lf), pch = 19, cex = 0.9, asp = 1,
+           xlab = "MDS 1", ylab = "MDS 2",
+           main = sprintf("VIC -- coloured by family (%s)", task_name))
+      legend("topright", legend = levels(vc_lf),
+             col = seq_len(nlevels(vc_lf)), pch = 19, bty = "n", cex = 0.8)
+      plot(bh_mds, col = as.integer(bh_cl), pch = 19, cex = 0.9, asp = 1,
+           xlab = "MDS 1", ylab = "MDS 2",
+           main = sprintf("Behavioural -- PAM cluster (k* = %d)", bh$best_k))
+      legend("topright", legend = paste("cluster", levels(bh_cl)),
+             col = seq_len(nlevels(bh_cl)), pch = 19, bty = "n", cex = 0.8)
+      plot(vc_mds, col = as.integer(vc_cl), pch = 19, cex = 0.9, asp = 1,
+           xlab = "MDS 1", ylab = "MDS 2",
+           main = sprintf("VIC -- PAM cluster (k* = %d)", vc$best_k))
+      legend("topright", legend = paste("cluster", levels(vc_cl)),
+             col = seq_len(nlevels(vc_cl)), pch = 19, bty = "n", cex = 0.8)
+      dev.off()
+
+      message(sprintf("%s/%s: behavioural k* = %d (sil = %.3f), VIC k* = %d (sil = %.3f)",
+                      task_name, metric,
+                      bh$best_k, max(bh$sil_scores),
+                      vc$best_k, max(vc$sil_scores)))
+    }
+  }
+}
+
+message("Wrote cluster-analysis plots to ", cluster_dir, "/")
