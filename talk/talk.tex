@@ -204,14 +204,37 @@
 \end{frame}
 
 % -----------------------------------------------------------------
-\begin{frame}{Behavioural vs VIC --- the comparison}
+\begin{frame}{Behavioural vs VIC --- \texttt{gc}}
   \centering
-  \includegraphics[width=0.95\textwidth,height=0.55\textheight,keepaspectratio]{../figures/vic/mds_compare_st.pdf}\\[0.5ex]
-  \footnotesize
+  \includegraphics[width=0.95\textwidth,height=0.82\textheight,keepaspectratio]{../figures/vic/mds_compare_gc.pdf}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Behavioural vs VIC --- \texttt{cs}}
+  \centering
+  \includegraphics[width=0.95\textwidth,height=0.82\textheight,keepaspectratio]{../figures/vic/mds_compare_cs.pdf}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Behavioural vs VIC --- \texttt{bs}}
+  \centering
+  \includegraphics[width=0.95\textwidth,height=0.82\textheight,keepaspectratio]{../figures/vic/mds_compare_bs.pdf}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Behavioural vs VIC --- \texttt{st}}
+  \centering
+  \includegraphics[width=0.95\textwidth,height=0.82\textheight,keepaspectratio]{../figures/vic/mds_compare_st.pdf}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Behavioural vs VIC --- what we see}
   \begin{itemize}
-    \item For \texttt{st}, behavioural family separation \textbf{collapses} on the importance side --- \texttt{nnet} and \texttt{svm} share the same VIC profile despite predicting very differently.
-    \item For \texttt{gc} and \texttt{cs} (backup): family separation \emph{is} preserved in VIC, but the within-family behavioural bimodality of \texttt{cs}/\texttt{tree} (Slide~9) \textbf{vanishes} in importance space.
-    \item \textbf{Take-away:} behavioural clustering is \emph{not} a reliable proxy for importance clustering --- the two views disagree empirically, task by task.
+    \item \texttt{gc}: family-level structure preserved cleanly in both views.
+    \item \texttt{cs}: family separation preserved, but the within-family behavioural bimodality of trees (Slide~9) \textbf{vanishes} on the importance side.
+    \item \texttt{bs}: single family in $\Rset$ --- uninformative.
+    \item \texttt{st}: behavioural family separation \textbf{collapses} in VIC --- \texttt{nnet} and \texttt{svm} share the same importance profile despite predicting very differently.
+    \item \textbf{Take-away:} behavioural clustering is \emph{not} a reliable proxy for importance clustering. The disagreement is empirical and \emph{task-dependent}.
   \end{itemize}
 \end{frame}
 
@@ -273,25 +296,6 @@
     \mathbf{D} \in \R^{n \times n}, \qquad d_{ij} \;=\; \|\hat{\yv}_i - \hat{\yv}_j\|_p.
   \]
   {\footnotesize Rows / columns of $\mathbf{D}$ now index \emph{models}, not observations. Hence \textbf{one MDS point = one model}; the cloud sits in $\R^n$ and is visualised in $\R^2$ via \texttt{cmdscale}.}
-\end{frame}
-
-% -----------------------------------------------------------------
-\begin{frame}{Backup --- behavioural vs VIC for \texttt{cs}}
-  \centering
-  \includegraphics[width=0.95\textwidth,height=0.62\textheight,keepaspectratio]{../figures/vic/mds_compare_cs.pdf}\\[0.5ex]
-  \footnotesize
-  \begin{itemize}
-    \item Family separation (\texttt{nnet} vs \texttt{tree}) survives the switch to VIC.
-    \item Tree's behavioural bimodality (Slide~9: MDS\,1 $\approx 8$ cluster + diffuse cloud) is \emph{absent} in VIC --- trees form a continuous diagonal in importance space.
-    \item I.e.\ the two behavioural tree modes share the same importance profile.
-  \end{itemize}
-\end{frame}
-
-% -----------------------------------------------------------------
-\begin{frame}{Backup --- behavioural vs VIC for \texttt{gc}}
-  \centering
-  \includegraphics[width=0.95\textwidth,height=0.7\textheight,keepaspectratio]{../figures/vic/mds_compare_gc.pdf}\\[0.5ex]
-  \footnotesize \texttt{svm} tight cluster, \texttt{xgb} broad scatter --- family-level structure is preserved cleanly in both views.
 \end{frame}
 
 \end{document}
