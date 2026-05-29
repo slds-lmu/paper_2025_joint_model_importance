@@ -26,9 +26,9 @@
 \input{../latex-math/basic-math}
 \input{../latex-math/basic-ml}
 
-% Rashomon set — no macro exists in latex-math; carries an
-% epsilon subscript to disambiguate from \risk (= \mathcal{R}).
-\newcommand{\Rset}{\mathcal{R}_\varepsilon}
+% Rashomon set — written as RS(\varepsilon) so that \mathcal{R}
+% (= \risk in latex-math) stays reserved for the risk functional.
+\newcommand{\Rset}{\mathrm{RS}(\varepsilon)}
 
 % Place LMU + MCML logos in the upper-right corner of every titled frame.
 \addtobeamertemplate{frametitle}{}{%
@@ -77,7 +77,7 @@
     \item In tabular ML, many models reach indistinguishable predictive performance.
     \item For a tolerance $\varepsilon$, the \emph{Rashomon set}
       \[
-        \Rset \;=\; \bigl\{\, \fhDlam \,:\, \mathrm{score}(\fhDlam) \le \mathrm{score}(\fhDlams) \cdot (1+\varepsilon),\ \lamv \in \Lam \,\bigr\}
+        \Rset \;=\; \bigl\{\, \fhDlam \,:\, \risk(\fhDlam) \le \risk(\fhDlams) \cdot (1+\varepsilon),\ \lamv \in \Lam \,\bigr\}
       \]
       collects every model within $\varepsilon$ of the best.
     \item Members of $\Rset$ can disagree substantially on individual predictions and on feature importance.
@@ -104,7 +104,7 @@
 
 % -----------------------------------------------------------------
 \begin{frame}{Setup}
-  Rashomon tolerance $\varepsilon = 1\%$ of the best score.\\
+  Rashomon tolerance $\varepsilon = 1\%$ of the minimum risk.\\
   Five learner families considered for every task: \texttt{tree}, \texttt{glmnet}, \texttt{xgb}, \texttt{nnet}, \texttt{svm}.
   \vspace{2ex}
   \begin{table}[h]
