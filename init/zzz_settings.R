@@ -1,5 +1,6 @@
-load("data/design.RData")
-load("data/results_vic.RData")
+load("data/design_all_but_TreeFARMS.RData")     # `design`, `pre_design`
+load("data/results_vic_all_but_TreeFARMS.RData")  # `vic`, `vic_normalized`
+load("data/results_modelperformances.RData")     # `res_dt`: task, learner, model.no, test.score, score
 
 task.keys = names(vic) # german credit, compas, bike sharing, synthetic
 learner.keys = c("tree", "glmnet", "xgb", "nnet", "svm")

@@ -23,10 +23,9 @@
 
 source("init.R")
 
-run_models_merged_location <- "data/run_models_merged.rds"
-preds_cache_location       <- "data/preds_cache.rds"
-figures_dir                <- "figures"
-vic_dir                    <- file.path(figures_dir, "vic")
+preds_cache_location <- "data/preds_cache.rds"
+figures_dir          <- "figures"
+vic_dir              <- file.path(figures_dir, "vic")
 
 RS_epsilon       <- 0.01
 distance_metrics <- c("euclidean", "manhattan")
@@ -34,8 +33,7 @@ distance_metrics <- c("euclidean", "manhattan")
 dir.create(vic_dir, showWarnings = FALSE, recursive = TRUE)
 
 # Rashomon-set membership per task (same call main.R uses)
-perfor_and_kernel <- get_performance_and_SVMkernel(run_models_merged_location)
-performance       <- perfor_and_kernel$performance
+performance <- build_performance_from_res_dt(res_dt)
 RS <- get_RS(RS_epsilon, performance, vic)
 
 # Optional: behavioural prediction cache, used for the comparison plot

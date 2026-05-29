@@ -2,9 +2,8 @@ source("init.R")
 
 #### settings #################################################################
 
-run_models_merged_location <- "data/run_models_merged.rds"
-preds_cache_location       <- "data/preds_cache.rds"
-figures_dir                <- "figures"
+preds_cache_location <- "data/preds_cache.rds"
+figures_dir          <- "figures"
 
 # Rashomon set epsilon
 RS_epsilon       <- 0.01
@@ -12,129 +11,90 @@ distance_metrics <- c("euclidean", "manhattan")
 
 dir.create(figures_dir, showWarnings = FALSE)
 
-#### prerequisites ############################################################
+#### Rashomon set #############################################################
+# Performance scores per (task, learner, model.no) come pre-computed in
+# data/results_modelperformances.RData (loaded as `res_dt` by init.R).
+# Build the nested list format get_RS() expects, then ask which models lie
+# within epsilon of each task's best.
 
-# performance and SVM kernel specification
-perfor_and_kernel <- get_performance_and_SVMkernel(run_models_merged_location)
-performance <- perfor_and_kernel$performance
-kernel      <- perfor_and_kernel$kernel
-rm(perfor_and_kernel)
+performance <- build_performance_from_res_dt(res_dt)
+RS          <- get_RS(RS_epsilon, performance, vic)
 
-# model indices of Rashomon set per task
-RS <- get_RS(RS_epsilon, performance, vic)
+#### prediction extraction ####################################################
+# Predictions on the held-out validation split are pre-computed by the
+# upstream pred_mult.R pipeline in paper_2024_rashomon_set and live in
+# data/results_preds_all_but_TreeFARMS.RData as a deeply-nested list
+# preds[[task]][[learner]][[model.no]] of mlr3 Prediction objects.
+# Here we slim that down to one numeric vector per RS member and cache
+# the result so downstream iteration on plots does not have to reload
+# the 425 MB predictions object.
 
-#### compute predictions (batchtools, cached to disk) #########################
-# Computing predictions for every Rashomon-set model is the expensive step.
-# Once cached, downstream iteration on distances / clustering / plots needs
-# no cluster access. Delete preds_cache_location to force a recompute.
+extract_pred_vec <- function(pred_obj) {
+  if (inherits(pred_obj, "PredictionClassif")) {
+    # binary tasks (gc, cs): one probability column suffices (other = 1 - x)
+    pred_obj$prob[, 2]
+  } else {
+    pred_obj$response
+  }
+}
 
 if (file.exists(preds_cache_location)) {
   message("Loading cached predictions from ", preds_cache_location)
   preds_by_task <- readRDS(preds_cache_location)
 } else {
-  regr <- getRegistry(
-    regpath      = "/media/external/ewaldf/paper_2025_joint_model_importance",
-    make.default = TRUE
-  )
-  # writeable = TRUE (default) only in one window !!!!
-  regr$cluster.functions <- makeClusterFunctionsSocket(ncpus = 30)
+  message("Loading predictions from data/results_preds_all_but_TreeFARMS.RData",
+          " (this is ~425 MB and may take a moment)")
+  load("data/results_preds_all_but_TreeFARMS.RData")  # provides `preds`
 
-  addProblem("fromlist", fun = function(data, job, taskname) {
-    task <- list.tasks[[taskname]]
-    if (taskname == "bs") task <- fix_bs_task_for_featureimp(task)
-    generateCanonicalDataSplits(task, ratio = 2 / 3, seed = 1)$validation
-  })
-
-  addAlgorithm("calculate_preds", fun = function(data, instance, job, learnername, model.no) {
-    taskname <- job$pars$prob.pars$taskname
-    model_path <- sprintf(
-      "/media/external/rashomon/datafiles/%s/%s/samplemodel_%s_%s_%04d.rds",
-      taskname, learnername, learnername, taskname, model.no
-    )
-    model <- readRDS(model_path)
-
-    if (taskname == "bs") model <- fix_bs_model_for_predict(model, instance)
-
-    if (instance$task_type == "classif") {
-      if (model$predict_type != "prob") model$predict_type <- "prob"
-      # binary tasks (gc, cs): one prob column suffices (the other is 1 - x)
-      model$predict(instance)$prob[, 2]
-    } else {
-      model$predict(instance)$response
-    }
-  })
-
-  pred_design <- rbindlist(
-    lapply(names(RS), function(i) design[rn == i][RS[[i]]])
-  )
-
-  addExperiments(
-    prob.designs = list(fromlist = data.table(taskname = pred_design$rn)),
-    algo.designs = list(calculate_preds = pred_design[, -"rn"]),
-    repls        = 1,
-    combine      = "bind"
-  )
-
-  submitJobs(findErrors())
-  submitJobs()
-  waitForJobs()
-
-  res <- ijoin(
-    getJobPars(),
-    reduceResultsDataTable(fun = function(x) list(res = x))
-  )
-
-  # Pull values out of the nested prob.pars / algo.pars / result list-columns
-  # directly. Avoids depending on unwrap()'s column-naming behaviour.
-  taskname_col <- sapply(res$prob.pars, `[[`, "taskname")
-  learner_col  <- sapply(res$algo.pars, `[[`, "learnername")
-  model_no_col <- sapply(res$algo.pars, `[[`, "model.no")
-  pred_list    <- lapply(res$result,    `[[`, "res")
-
-  # one entry per task: matrix (row = model, col = validation observation)
-  # plus the learner / model.no vectors so we can colour plots by learner.
-  preds_by_task <- lapply(split(seq_along(taskname_col), taskname_col), function(idx) {
-    preds_mat <- do.call(rbind, pred_list[idx])
-    rownames(preds_mat) <- sprintf("%s_m%s", learner_col[idx], model_no_col[idx])
+  preds_by_task <- lapply(names(RS), function(task_name) {
+    rs_rows <- design[rn == task_name][RS[[task_name]]]
+    pred_mat <- do.call(rbind, lapply(seq_len(nrow(rs_rows)), function(i) {
+      extract_pred_vec(preds[[task_name]][[rs_rows$learnername[i]]][[rs_rows$model.no[i]]])
+    }))
+    rownames(pred_mat) <- sprintf("%s_m%d", rs_rows$learnername, rs_rows$model.no)
     list(
-      preds    = preds_mat,
-      learner  = learner_col[idx],
-      model_no = model_no_col[idx]
+      preds    = pred_mat,
+      learner  = rs_rows$learnername,
+      model_no = rs_rows$model.no,
+      rds      = rs_rows$rds
     )
   })
+  names(preds_by_task) <- names(RS)
 
   saveRDS(preds_by_task, preds_cache_location)
   message("Saved predictions to ", preds_cache_location)
+  rm(preds)  # free the 425 MB
+  invisible(gc())
 }
 
 #### distances, clustering & visualisation ####################################
-# For each task × distance metric, compute the pairwise behavioural distance
+# For each task x distance metric, compute the pairwise behavioural distance
 # between Rashomon-set models (rows = models, cols = validation observations)
 # and visualise it three ways: hierarchical clustering, classical MDS,
 # partitioning around medoids.
 
-for (taskname in names(preds_by_task)) {
-  td <- preds_by_task[[taskname]]
+for (task_name in names(preds_by_task)) {
+  td <- preds_by_task[[task_name]]
   learner_factor <- factor(td$learner)
 
   for (metric in distance_metrics) {
     dist_mat <- dist(td$preds, method = metric)
 
     # hierarchical clustering dendrogram
-    pdf(file.path(figures_dir, sprintf("dendrogram_%s_%s.pdf", taskname, metric)),
+    pdf(file.path(figures_dir, sprintf("dendrogram_%s_%s.pdf", task_name, metric)),
         width = 9, height = 6)
     plot(hclust(dist_mat), hang = -1,
-         main = sprintf("Hierarchical clustering — %s (%s)", taskname, metric),
+         main = sprintf("Hierarchical clustering -- %s (%s)", task_name, metric),
          xlab = "model", sub = "", cex = 0.6)
     dev.off()
 
     # classical (metric) MDS, coloured by learner family
     mds <- cmdscale(dist_mat, k = 2, eig = TRUE)
-    pdf(file.path(figures_dir, sprintf("mds_%s_%s.pdf", taskname, metric)),
+    pdf(file.path(figures_dir, sprintf("mds_%s_%s.pdf", task_name, metric)),
         width = 7, height = 6)
     plot(mds$points, type = "n",
          xlab = "MDS 1", ylab = "MDS 2", asp = 1,
-         main = sprintf("Classical MDS — %s (%s)", taskname, metric))
+         main = sprintf("Classical MDS -- %s (%s)", task_name, metric))
     points(mds$points,
            col = as.integer(learner_factor), pch = 19, cex = 0.9)
     legend("topright",
@@ -143,11 +103,11 @@ for (taskname in names(preds_by_task)) {
            pch    = 19, bty = "n")
     dev.off()
 
-    # PAM, k = 2 placeholder — tune via silhouette in a later iteration
+    # PAM, k = 2 placeholder -- tune via silhouette in a later iteration
     pam_res <- cluster::pam(dist_mat, k = 2, metric = metric)
-    pdf(file.path(figures_dir, sprintf("pam_%s_%s.pdf", taskname, metric)),
+    pdf(file.path(figures_dir, sprintf("pam_%s_%s.pdf", task_name, metric)),
         width = 9, height = 5)
-    plot(pam_res, main = sprintf("PAM clustering — %s (%s)", taskname, metric))
+    plot(pam_res, main = sprintf("PAM clustering -- %s (%s)", task_name, metric))
     dev.off()
   }
 }

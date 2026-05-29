@@ -31,31 +31,24 @@ fix_bs_model_for_predict <- function(model, instance) {
   lr
 }
 
-#### get performance and SVM kernel specification ####
-get_performance_and_SVMkernel = function(file_location){
-  # file_location: file location within the repository for a ".rds" file 
-  #                containing information of the AutoML process. Needs a list
-  #                "torun.samples" containing a list per learner.
-  #                Each list entry must be a dataframe with at least two 
-  #                columns "taskname" and "score".
-  run_models = readRDS(file_location)
-  learner.keys = names(run_models$torun.samples)
-  task.keys = unique(as.vector(sapply(run_models$torun.samples, 
-                                      function(x) unique(x$taskname))))
+#### build nested performance list from the flat res_dt format ####
+# res_dt (from data/results_modelperformances.RData) has columns
+#   task, learner, model.no, test.score, score (= score type label)
+# get_RS() expects a nested list performance[[task]][[learner]] = numeric
+# vector of test scores ordered by model.no, parallel to the model columns
+# in vic[[task]]. This helper does the pivot.
+build_performance_from_res_dt = function(res_dt) {
   performance = list()
-  kernel = list()
-  for(task.key in task.keys){
-    performance[[task.key]] = list()
-    kernel[[task.key]] = c()
-    for(learner.key in learner.keys){
-      dt = run_models$torun.samples[[learner.key]]
-      performance[[task.key]][[learner.key]] = dt[taskname == task.key]$score
-      if(learner.key == "svm"){
-        kernel[[task.key]] = c(kernel[[task.key]],paste0("svm_",dt[taskname == task.key]$svm.kernel))
-      }
+  for (t in unique(res_dt$task)) {
+    performance[[t]] = list()
+    sub_t = res_dt[task == t]
+    for (l in unique(sub_t$learner)) {
+      sub_tl = sub_t[learner == l]
+      data.table::setorder(sub_tl, model.no)
+      performance[[t]][[l]] = sub_tl$test.score
     }
   }
-  return(list(performance = performance, kernel = kernel))
+  performance
 }
 
 #### get Rashomon set ####
