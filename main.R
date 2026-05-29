@@ -17,8 +17,10 @@ dir.create(figures_dir, showWarnings = FALSE)
 # Build the nested list format get_RS() expects, then ask which models lie
 # within epsilon of each task's best.
 
-performance <- build_performance_from_res_dt(res_dt)
-RS          <- get_RS(RS_epsilon, performance, vic)
+performance <- build_performance_from_res_dt(res_dt,
+                                              tasks    = names(vic),
+                                              learners = learner.keys)
+RS <- get_RS(RS_epsilon, performance, vic)
 
 #### prediction extraction ####################################################
 # Predictions on the held-out validation split are pre-computed by the

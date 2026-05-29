@@ -36,16 +36,27 @@ fix_bs_model_for_predict <- function(model, instance) {
 #   task, learner, model.no, test.score, score (= score type label)
 # get_RS() expects a nested list performance[[task]][[learner]] = numeric
 # vector of test scores ordered by model.no, parallel to the model columns
-# in vic[[task]]. This helper does the pivot.
-build_performance_from_res_dt = function(res_dt) {
+# in vic[[task]].
+#
+# Important: every task must carry an entry for every learner (an empty
+# numeric vector is fine) so that sapply(performance, sapply, min) is a
+# rectangular matrix and not a ragged list. Without this, apply(., 2, min)
+# in get_RS() fails with "dim(X) must have a positive length".
+build_performance_from_res_dt = function(res_dt, tasks = NULL, learners = NULL) {
+  if (is.null(tasks))    tasks    = sort(unique(res_dt$task))
+  if (is.null(learners)) learners = sort(unique(res_dt$learner))
   performance = list()
-  for (t in unique(res_dt$task)) {
+  for (t in tasks) {
     performance[[t]] = list()
     sub_t = res_dt[task == t]
-    for (l in unique(sub_t$learner)) {
+    for (l in learners) {
       sub_tl = sub_t[learner == l]
-      data.table::setorder(sub_tl, model.no)
-      performance[[t]][[l]] = sub_tl$test.score
+      if (nrow(sub_tl) == 0) {
+        performance[[t]][[l]] = numeric(0)
+      } else {
+        data.table::setorder(sub_tl, model.no)
+        performance[[t]][[l]] = sub_tl$test.score
+      }
     }
   }
   performance

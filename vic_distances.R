@@ -33,7 +33,9 @@ distance_metrics <- c("euclidean", "manhattan")
 dir.create(vic_dir, showWarnings = FALSE, recursive = TRUE)
 
 # Rashomon-set membership per task (same call main.R uses)
-performance <- build_performance_from_res_dt(res_dt)
+performance <- build_performance_from_res_dt(res_dt,
+                                              tasks    = names(vic),
+                                              learners = learner.keys)
 RS <- get_RS(RS_epsilon, performance, vic)
 
 # Optional: behavioural prediction cache, used for the comparison plot
