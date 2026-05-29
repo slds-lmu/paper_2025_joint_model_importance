@@ -36,7 +36,7 @@
     \node[anchor=north east, xshift=-4pt, yshift=4pt]
       at (current page.north east)
       {\includegraphics[height=0.55cm]{../logos/lmu.png}\hspace{2pt}%
-       \includegraphics[height=0.55cm]{../logos/mcml.jpg}};
+       \includegraphics[height=0.45cm]{../logos/mcml.jpg}};
   \end{tikzpicture}%
 }
 
@@ -55,7 +55,7 @@
   \vspace*{0.3cm}
   \begin{center}
     \includegraphics[height=0.9cm]{../logos/lmu.png}\hspace{1.5em}%
-    \includegraphics[height=0.9cm]{../logos/mcml.jpg}
+    \includegraphics[height=0.7cm]{../logos/mcml.jpg}
   \end{center}
   \vspace{0.6cm}
   \begin{center}
@@ -80,7 +80,7 @@
         \Rset \;=\; \bigl\{\, \fhDlam \,:\, \risk(\fhDlam) \le \risk(\fhDlams) \cdot (1+\varepsilon),\ \lamv \in \Lam \,\bigr\}
       \]
       collects every model within $\varepsilon$ of the best.\\[0.2em]
-      {\footnotesize Notation: $\fhDlam$ = model trained on data $\D$ with hyperparameter configuration $\lamv \in \Lam$; $\lamv^{\ast}$ = risk-minimising configuration; $\risk(\cdot)$ = (empirical) risk functional.}
+      {\footnotesize Notation: $\fhDlam$ = model trained on data $\D$ with hyperparameter configuration $\lamv \in \Lam$; $\lamv^{\ast}$ = risk-minimizing configuration; $\risk(\cdot)$ = risk.}
     \item Members of $\Rset$ can disagree substantially on individual predictions and on feature importance.
     \item \textbf{Question.} How are these equally good models related to one another, and what does the collective tell us beyond the single best?
   \end{itemize}
@@ -89,12 +89,12 @@
 % -----------------------------------------------------------------
 \begin{frame}{Pipeline}
   \begin{enumerate}
-    \item For every $\fhDlam \in \Rset$, compute the prediction vector $\hat{\yv}_{\lamv}$ on a held-out 2/3 validation split.
+    \item For every $\fhDlam \in \Rset$, compute the prediction vector $\hat{\yv}$ on a held-out 2/3 validation split.
     \item Build the pairwise \emph{behavioural distance} matrix $\mathbf{D}$ with entries
       \[
         d_{ij} \;=\; \|\hat{\yv}_i - \hat{\yv}_j\|_p \;=\; \Bigl(\sum_{o=1}^{n_{\text{val}}} \bigl|\hat y_{i,o} - \hat y_{j,o}\bigr|^p\Bigr)^{1/p},
       \]
-      where $i, j$ index models in $\Rset$ and $o$ runs over the $n_{\text{val}}$ validation observations (see backup slide).
+      where $i, j$ index models in $\Rset$ and $o$ runs over the $n_{\text{val}}$ validation observations.
     \item View $\mathbf{D}$ three ways:
       \begin{itemize}
         \item hierarchical clustering (\texttt{hclust})
@@ -103,7 +103,7 @@
       \end{itemize}
   \end{enumerate}
   \vspace{0.5ex}
-  {\footnotesize Predictions are class probabilities for classification, $\fh(\xv)$ for regression. Distances computed for both Euclidean ($p = 2$) and Manhattan ($p = 1$); results shown are Euclidean (Manhattan tells the same story).}
+  {\footnotesize Distances computed for both Euclidean ($p = 2$) and Manhattan ($p = 1$); results shown are Euclidean (Manhattan tells the same story).}
 \end{frame}
 
 % -----------------------------------------------------------------
@@ -190,15 +190,35 @@
 \end{frame}
 
 % -----------------------------------------------------------------
+\begin{frame}{Scope --- behaviour is not importance}
+  \begin{itemize}
+    \item \textbf{What we have computed:} a \emph{behavioural} distance
+      \(
+        d_{ij} \;=\; \|\hat{\yv}_i - \hat{\yv}_j\|_p
+      \)
+      from validation predictions.
+    \item \textbf{What ``joint model importance'' asks:} how does the per-model feature-importance vector $\bm{\phi}^{(i)}$ vary across $i \in \Rset$? (Variable-Importance Cloud, VIC.)
+    \item \textbf{The two are independent axes.}
+      \begin{itemize}
+        \item Identical predictions ($d_{ij} = 0$) can hide different feature reliance.
+        \item Different predictions need not produce different importance profiles.
+      \end{itemize}
+    \item Today: the behavioural skeleton of $\Rset$ --- a prerequisite, not an answer, for joint importance.\\
+      Next: rerun the pipeline with a VIC-based distance and compare cluster structure.
+  \end{itemize}
+\end{frame}
+
+% -----------------------------------------------------------------
 \begin{frame}{First interpretation}
   \begin{itemize}
-    \item \textbf{Joint model importance is a two-level question:}
+    \item \textbf{The behavioural skeleton of $\Rset$ has two-level structure:}
       \begin{enumerate}
         \item Which learner family does the model come from?
         \item Where on the family's behavioural manifold does it sit?
       \end{enumerate}
-    \item Across every task observed, learner choice is the first axis of disagreement --- not hyperparameter setting.
-    \item Within-family structure can be smooth and HP-aligned (\texttt{st}/\texttt{nnet} $\sim$ \texttt{decay}) or discrete and HP-orthogonal (\texttt{cs}/\texttt{tree}; \emph{causal mechanism still speculative}).
+    \item Across every task observed, learner choice is the first axis of \emph{behavioural} disagreement --- not hyperparameter setting.
+    \item Within-family behaviour can be smooth and HP-aligned (\texttt{st}/\texttt{nnet} $\sim$ \texttt{decay}) or discrete and HP-orthogonal (\texttt{cs}/\texttt{tree}; \emph{causal mechanism still speculative}).
+    \item \textbf{Open:} does \emph{importance} follow the same structure? --- VIC-based distance is the next step.
   \end{itemize}
 \end{frame}
 
