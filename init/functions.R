@@ -63,52 +63,51 @@ build_performance_from_res_dt = function(res_dt, tasks = NULL, learners = NULL) 
 }
 
 #### get Rashomon set ####
-get_RS = function(epsilon, performance, vic){
-  # epsilon: Prozentsatz, den die Performance der Modelle im RS von der 
-  #          Performance des "besten" Modells abweichen darf. (z.B. 0.05 für 5%)
-  # performance: Vektor mit den Performance Maßen der Modelle.
-  # vic: Liste mit Eintragungen für jeden Datensatz, die jeweils einen data 
-  #      frame enthalten, der in der ersten Spalte die features enthält und in 
-  #      den übrigen Spalten pro Modell die passenden feature importance Werte.
-  #      Die Spalten müssen das Format pfi_[modell]_m[modellnummer] haben, z.B.:
-  #      pfi_tree_m1
-  # min(numeric(0)) returns Inf with a warning -- harmless for tasks where
-  # a learner produced no models, but the warnings are noisy.
+# Returns a list `model_index_RS` with one entry per task. Each entry is an
+# integer vector of column positions inside vic[[task]]'s model columns
+# (1-indexed, post the leading feature column). Equivalently these are the
+# row positions inside design[rn == task], so callers can use them to
+# subset either object.
+#
+# A model is in the Rashomon set when its test score is strictly below
+#   best_performance(task) * (1 + epsilon).
+#
+# We walk the VIC columns directly and look the matching score up in
+# `performance` by (learner, model.no) parsed from the column name. This
+# is robust against the cases that previously broke the cumsum-offset
+# version:
+#   - learner present in `performance` but not in vic[[task]] -> skipped
+#   - tasks where vic has fewer learners than the global learner.keys
+#   - performance vector longer than the corresponding vic block (surplus
+#     model.no's simply aren't iterated over)
+get_RS = function(epsilon, performance, vic) {
+  # min(numeric(0)) is Inf with a warning -- harmless when a learner had
+  # no models for some task, but the warnings are noisy.
   best_performance = suppressWarnings(apply(sapply(performance, sapply, min), 2, min))
   task.keys = names(vic)
-  learner.keys = unique(as.vector(sapply(performance, 
-                                         function(x) names(x))))
-  perf_index_RS = list()
-  vic_RS = list()
-  vic_normalized_RS = list()
-  vic_learner_table = list()
-  for(task.key in task.keys){
-    vic_names = colnames(vic[[task.key]])
-    perf_index_RS[[task.key]] = lapply(performance[[task.key]], function(x) which(x < best_performance[task.key]*(1+epsilon)))
-    vic_learner = sub(".*_(.*?)_.*", "\\1", vic_names[-1])
-    vic_learner_table[[task.key]] = list()
-    vic_learner_table[[task.key]]$all = table(vic_learner)[unique(vic_learner)] # also in pre_design so this is a bit useless
-    cum_sum_learner = cumsum(vic_learner_table[[task.key]]$all)
-    index = 1 # feature column in vic
-    for(learner.key in learner.keys){
-      if(!is_empty(perf_index_RS[[task.key]][[learner.key]])){
-        index_adopt = cum_sum_learner[which(learner.key == learner.keys)-1]
-        if(is_empty(index_adopt)){
-          model_index = perf_index_RS[[task.key]][[learner.key]]
-        } else {
-          model_index = perf_index_RS[[task.key]][[learner.key]]+index_adopt
-        }
-        index = c(index, model_index+1)
-      }
+
+  model_index_RS = list()
+  for (task.key in task.keys) {
+    threshold  = best_performance[task.key] * (1 + epsilon)
+    vic_cnames = colnames(vic[[task.key]])[-1]   # drop feature column
+    if (length(vic_cnames) == 0) {
+      model_index_RS[[task.key]] = integer(0)
+      next
     }
-    vic_RS[[task.key]] = vic[[task.key]][,index]
-    vic_normalized_RS[[task.key]] = vic_normalized[[task.key]][,index]
-    perf_index_RS[[task.key]] = index
-    
-    vic_RS_names = colnames(vic_RS[[task.key]])
-    vic_RS_learner = sub(".*_(.*?)_.*", "\\1", vic_RS_names[-1])
-    vic_learner_table[[task.key]]$RS = table(vic_RS_learner)[unique(vic_RS_learner)]
+    vic_learner  = sub(".*_(.*?)_.*", "\\1", vic_cnames)
+    vic_model_no = as.integer(sub(".*_m([0-9]+)$", "\\1", vic_cnames))
+
+    rs = integer(0)
+    for (i in seq_along(vic_cnames)) {
+      l   = vic_learner[i]
+      mno = vic_model_no[i]
+      perf_vec = performance[[task.key]][[l]]
+      if (is.null(perf_vec) || length(perf_vec) == 0) next
+      if (is.na(mno) || mno > length(perf_vec)) next
+      score = perf_vec[mno]
+      if (!is.na(score) && score < threshold) rs = c(rs, i)
+    }
+    model_index_RS[[task.key]] = rs
   }
-  rm(vic_names, vic_learner, cum_sum_learner, index)
-  model_index_RS = lapply(perf_index_RS, function(x) x[-1]-1)
+  model_index_RS
 }
