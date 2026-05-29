@@ -65,7 +65,7 @@
   \vfill
   \begin{center}
     {\large Fiona K.~Ewald}\\[0.4em]
-    LMU Munich \,\textbullet\, MCML\\[0.4em]
+    \\[0.4em]
     \today
   \end{center}
   \vspace*{0.4cm}
@@ -271,7 +271,7 @@
   \begin{itemize}
     \item \textbf{$\varepsilon$ sensitivity.} How do behavioural and VIC clusters shift as the Rashomon tolerance opens?
     \item \textbf{Per-feature analysis.} Which features drive the behaviour-vs-VIC disagreement? Especially for the \texttt{st} collapse.
-    \item \textbf{Choose the number of clusters $k$ for PAM via silhouette}, then read out the medoids as ``representative'' members of $\Rset$.
+    \item \textbf{Medoids as representatives.} Treat the silhouette-tuned PAM medoids as a compact reduction of $\Rset$ for downstream interpretation.
     \item \textbf{Disagreement map.} Where in feature space do Rashomon-set models disagree the most?
     \item \textbf{Discrete tree mode on \texttt{cs}.} Is the behavioural bimodality driven by structural differences (root split, depth) that hyperparameters do not capture?
   \end{itemize}
@@ -335,6 +335,132 @@
     \includegraphics[height=0.38\textheight,keepaspectratio]{../figures/clusters/silhouette_st_euclidean.pdf}
   \end{tabular}\\[0.3ex]
   {\footnotesize Avg.\ silhouette width over $k = 2, \ldots, 10$. Behavioural (left) and VIC (right) per task; red dashed line marks $k^{\ast}$.}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- silhouette scans (Manhattan)}
+  \centering
+  \begin{tabular}{@{}c@{\hspace{1ex}}c@{}}
+    \includegraphics[height=0.38\textheight,keepaspectratio]{../figures/clusters/silhouette_gc_manhattan.pdf} &
+    \includegraphics[height=0.38\textheight,keepaspectratio]{../figures/clusters/silhouette_cs_manhattan.pdf} \\[-1ex]
+    \includegraphics[height=0.38\textheight,keepaspectratio]{../figures/clusters/silhouette_bs_manhattan.pdf} &
+    \includegraphics[height=0.38\textheight,keepaspectratio]{../figures/clusters/silhouette_st_manhattan.pdf}
+  \end{tabular}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- behavioural MDS (Manhattan)}
+  \centering
+  \begin{tabular}{@{}c@{\hspace{1ex}}c@{}}
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/mds_gc_manhattan.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/mds_cs_manhattan.pdf} \\[-1ex]
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/mds_bs_manhattan.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/mds_st_manhattan.pdf}
+  \end{tabular}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- behavioural dendrograms (Euclidean)}
+  \centering
+  \begin{tabular}{@{}c@{\hspace{1ex}}c@{}}
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/dendrogram_gc_euclidean.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/dendrogram_cs_euclidean.pdf} \\[-1ex]
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/dendrogram_bs_euclidean.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/dendrogram_st_euclidean.pdf}
+  \end{tabular}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- behavioural PAM, $k=2$ (Euclidean)}
+  \centering
+  \begin{tabular}{@{}c@{\hspace{1ex}}c@{}}
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/pam_gc_euclidean.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/pam_cs_euclidean.pdf} \\[-1ex]
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/pam_bs_euclidean.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/pam_st_euclidean.pdf}
+  \end{tabular}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- VIC MDS (Euclidean)}
+  \centering
+  \begin{tabular}{@{}c@{\hspace{1ex}}c@{}}
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/mds_gc_euclidean.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/mds_cs_euclidean.pdf} \\[-1ex]
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/mds_bs_euclidean.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/mds_st_euclidean.pdf}
+  \end{tabular}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- VIC MDS (Manhattan)}
+  \centering
+  \begin{tabular}{@{}c@{\hspace{1ex}}c@{}}
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/mds_gc_manhattan.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/mds_cs_manhattan.pdf} \\[-1ex]
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/mds_bs_manhattan.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/mds_st_manhattan.pdf}
+  \end{tabular}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- VIC dendrograms (Euclidean)}
+  \centering
+  \begin{tabular}{@{}c@{\hspace{1ex}}c@{}}
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/dendrogram_gc_euclidean.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/dendrogram_cs_euclidean.pdf} \\[-1ex]
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/dendrogram_bs_euclidean.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/dendrogram_st_euclidean.pdf}
+  \end{tabular}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- VIC PAM, $k=2$ (Euclidean)}
+  \centering
+  \begin{tabular}{@{}c@{\hspace{1ex}}c@{}}
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/pam_gc_euclidean.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/pam_cs_euclidean.pdf} \\[-1ex]
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/pam_bs_euclidean.pdf} &
+    \includegraphics[height=0.4\textheight,keepaspectratio]{../figures/vic/pam_st_euclidean.pdf}
+  \end{tabular}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- HP trajectories: \texttt{bs}/\texttt{tree}, \texttt{cs}/\texttt{nnet}}
+  \centering
+  \includegraphics[width=0.95\textwidth,height=0.35\textheight,keepaspectratio]{../figures/hp_trajectories/hp_vs_mds1_bs_tree.pdf}\\[0.5ex]
+  \includegraphics[width=0.95\textwidth,height=0.35\textheight,keepaspectratio]{../figures/hp_trajectories/hp_vs_mds1_cs_nnet.pdf}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- HP trajectories: \texttt{gc}/\texttt{svm}, \texttt{st}/\texttt{svm}}
+  \centering
+  \includegraphics[width=0.8\textwidth,height=0.35\textheight,keepaspectratio]{../figures/hp_trajectories/hp_vs_mds1_gc_svm.pdf}\\[0.5ex]
+  \includegraphics[width=0.8\textwidth,height=0.35\textheight,keepaspectratio]{../figures/hp_trajectories/hp_vs_mds1_st_svm.pdf}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- HP trajectories: \texttt{gc}/\texttt{xgb}}
+  \centering
+  \includegraphics[width=0.78\textwidth,height=0.85\textheight,keepaspectratio]{../figures/hp_trajectories/hp_vs_mds1_gc_xgb.pdf}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- PAM cluster comparison \texttt{gc}}
+  \centering
+  \includegraphics[width=0.85\textwidth,height=0.82\textheight,keepaspectratio]{../figures/clusters/mds_clusters_compare_gc_euclidean.pdf}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- PAM cluster comparison \texttt{cs}}
+  \centering
+  \includegraphics[width=0.85\textwidth,height=0.82\textheight,keepaspectratio]{../figures/clusters/mds_clusters_compare_cs_euclidean.pdf}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- PAM cluster comparison \texttt{bs}}
+  \centering
+  \includegraphics[width=0.85\textwidth,height=0.82\textheight,keepaspectratio]{../figures/clusters/mds_clusters_compare_bs_euclidean.pdf}
 \end{frame}
 
 \end{document}
