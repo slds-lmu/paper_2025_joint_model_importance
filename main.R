@@ -85,9 +85,9 @@ if (file.exists(preds_cache_location)) {
 
 for (task_name in names(preds_by_task)) {
   td <- preds_by_task[[task_name]]
-  if (nrow(td$preds) < 2) {
+  if (nrow(td$preds) < 3) {
     message(task_name, ": only ", nrow(td$preds),
-            " RS member(s) -- cannot cluster, skipping")
+            " RS member(s) -- need >= 3 for MDS(k=2) / PAM(k=2), skipping")
     next
   }
   learner_factor <- factor(td$learner)

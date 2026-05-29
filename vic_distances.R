@@ -94,7 +94,7 @@ if (!is.null(preds_by_task)) {
 
 for (task_name in names(vic_by_task)) {
   td <- vic_by_task[[task_name]]
-  if (is.null(td) || nrow(td$imp) < 2) next
+  if (is.null(td) || nrow(td$imp) < 3) next  # MDS(k=2) and PAM(k=2) both need n >= 3
   learner_factor <- factor(td$learner)
 
   for (metric in distance_metrics) {
@@ -141,6 +141,7 @@ if (!is.null(preds_by_task)) {
   for (task_name in names(vic_by_task)) {
     td <- vic_by_task[[task_name]]; pb <- preds_by_task[[task_name]]
     if (is.null(td) || is.null(pb)) next
+    if (nrow(td$imp) < 3 || nrow(pb$preds) < 3) next  # need n >= 3 for cmdscale(k=2)
 
     bh_mds <- cmdscale(dist(pb$preds, method = "euclidean"), k = 2)
     vc_mds <- cmdscale(dist(td$imp,   method = "euclidean"), k = 2)
@@ -193,6 +194,7 @@ if (!is.null(preds_by_task)) {
     td <- vic_by_task[[task_name]]
     pb <- preds_by_task[[task_name]]
     if (is.null(td) || is.null(pb)) next
+    if (nrow(td$imp) < 3 || nrow(pb$preds) < 3) next  # need n >= 3 for MDS(k=2)
     # cap k at n - 1; PAM needs at least 2 points per cluster
     k_grid <- 2:min(10, nrow(td$imp) - 1)
     if (length(k_grid) < 2) next
