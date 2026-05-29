@@ -298,4 +298,13 @@
   {\footnotesize Rows / columns of $\mathbf{D}$ now index \emph{models}, not observations. Hence \textbf{one MDS point = one model}; the cloud sits in $\R^n$ and is visualised in $\R^2$ via \texttt{cmdscale}.}
 \end{frame}
 
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- the three views of $\mathbf{D}$}
+  \begin{itemize}
+    \item \textbf{Hierarchical clustering} (\texttt{hclust}): bottom-up greedy merging of the two closest clusters; output is a dendrogram. Cluster count is fixed by where one cuts.
+    \item \textbf{Classical MDS} (\texttt{cmdscale}, $k = 2$): eigendecomposition of the double-centred squared distance matrix, top-$k$ eigenvectors as coordinates. Each model becomes a point in $\R^k$ whose pairwise Euclidean distances approximate $\mathbf{D}$. For Euclidean $\mathbf{D}$ \textbf{equivalent to PCA} up to sign and rotation.
+    \item \textbf{Partitioning around medoids} (\texttt{cluster::pam}): pick $k$ medoids (representative models) minimising the total distance from each model to its nearest medoid. Robust analogue of $k$-means for arbitrary distance matrices; best $k$ via average silhouette width.
+  \end{itemize}
+\end{frame}
+
 \end{document}
