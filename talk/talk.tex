@@ -192,44 +192,47 @@
 % -----------------------------------------------------------------
 \begin{frame}{Scope --- behaviour is not importance}
   \begin{itemize}
-    \item \textbf{What we have computed:} a \emph{behavioural} distance
+    \item \textbf{What we measure:} behavioural distance
       \(
-        d_{ij} \;=\; \|\hat{\yv}_i - \hat{\yv}_j\|_p
+        d_{ij}^{\text{beh}} = \|\hat{\yv}_i - \hat{\yv}_j\|_p
       \)
       from validation predictions.
-    \item \textbf{What ``joint model importance'' asks:} how does the per-model feature-importance vector $\bm{\phi}^{(i)}$ vary across $i \in \Rset$? (Variable-Importance Cloud, VIC.)
-    \item \textbf{The two are independent axes.}
-      \begin{itemize}
-        \item Identical predictions ($d_{ij} = 0$) can hide different feature reliance.
-        \item Different predictions need not produce different importance profiles.
-      \end{itemize}
-    \item Today: the behavioural skeleton of $\Rset$ --- a prerequisite, not an answer, for joint importance.\\
-      Next: rerun the pipeline with a VIC-based distance and compare cluster structure.
+    \item \textbf{What ``joint model importance'' asks:} how do per-model importance vectors $\bm{\phi}^{(i)}$ vary across $i \in \Rset$? (Variable-Importance Cloud, VIC.)
+    \item \textbf{Independent in principle:} identical predictions need not imply identical importance (and vice versa).
+    \item \textbf{Compared empirically next slide:} same models, same colouring, behavioural distance left, VIC distance right.
+  \end{itemize}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Behavioural vs VIC --- the comparison}
+  \centering
+  \includegraphics[width=0.95\textwidth,height=0.55\textheight,keepaspectratio]{../figures/vic/mds_compare_st.pdf}\\[0.5ex]
+  \footnotesize
+  \begin{itemize}
+    \item For \texttt{st}, behavioural family separation \textbf{collapses} on the importance side --- \texttt{nnet} and \texttt{svm} share the same VIC profile despite predicting very differently.
+    \item For \texttt{gc} and \texttt{cs} (backup): family separation \emph{is} preserved in VIC, but the within-family behavioural bimodality of \texttt{cs}/\texttt{tree} (Slide~9) \textbf{vanishes} in importance space.
+    \item \textbf{Take-away:} behavioural clustering is \emph{not} a reliable proxy for importance clustering --- the two views disagree empirically, task by task.
   \end{itemize}
 \end{frame}
 
 % -----------------------------------------------------------------
 \begin{frame}{First interpretation}
   \begin{itemize}
-    \item \textbf{The behavioural skeleton of $\Rset$ has two-level structure:}
-      \begin{enumerate}
-        \item Which learner family does the model come from?
-        \item Where on the family's behavioural manifold does it sit?
-      \end{enumerate}
-    \item Across every task observed, learner choice is the first axis of \emph{behavioural} disagreement --- not hyperparameter setting.
-    \item Within-family behaviour can be smooth and HP-aligned (\texttt{st}/\texttt{nnet} $\sim$ \texttt{decay}) or discrete and HP-orthogonal (\texttt{cs}/\texttt{tree}; \emph{causal mechanism still speculative}).
-    \item \textbf{Open:} does \emph{importance} follow the same structure? --- VIC-based distance is the next step.
+    \item Within $\Rset$, \textbf{behaviour has two-level structure:} learner family + position on the family's behavioural manifold.
+    \item Across every task observed, family choice dominates behavioural variance --- not hyperparameter setting.
+    \item The within-family manifold can be smooth and HP-aligned (\texttt{st}/\texttt{nnet} $\sim$ \texttt{decay}) or discrete and HP-orthogonal (\texttt{cs}/\texttt{tree}; \emph{causal mechanism still speculative}).
+    \item \textbf{But behaviour is not importance:} family separation only partly survives in VIC (\texttt{gc}, \texttt{cs}), and the within-family discreteness of \texttt{cs}/\texttt{tree} vanishes entirely. For \texttt{st}, the families themselves collapse. \emph{Joint model importance therefore requires both views.}
   \end{itemize}
 \end{frame}
 
 % -----------------------------------------------------------------
 \begin{frame}{Next steps}
   \begin{itemize}
-    \item \textbf{$\varepsilon$ sensitivity.} How does family composition shift as the Rashomon tolerance opens?
-    \item \textbf{Feature-importance distance.} Compare behavioural distance with a distance built from VIC --- do the clusters agree?
+    \item \textbf{$\varepsilon$ sensitivity.} How do behavioural and VIC clusters shift as the Rashomon tolerance opens?
+    \item \textbf{Per-feature analysis.} Which features drive the behaviour-vs-VIC disagreement? Especially for the \texttt{st} collapse.
     \item \textbf{Choose the number of clusters $k$ for PAM via silhouette}, then read out the medoids as ``representative'' members of $\Rset$.
     \item \textbf{Disagreement map.} Where in feature space do Rashomon-set models disagree the most?
-    \item \textbf{Discrete tree mode on \texttt{cs}.} Is the bimodality driven by structural differences (root split, depth) that hyperparameters do not capture?
+    \item \textbf{Discrete tree mode on \texttt{cs}.} Is the behavioural bimodality driven by structural differences (root split, depth) that hyperparameters do not capture?
   \end{itemize}
 \end{frame}
 
@@ -270,6 +273,25 @@
     \mathbf{D} \in \R^{n \times n}, \qquad d_{ij} \;=\; \|\hat{\yv}_i - \hat{\yv}_j\|_p.
   \]
   {\footnotesize Rows / columns of $\mathbf{D}$ now index \emph{models}, not observations. Hence \textbf{one MDS point = one model}; the cloud sits in $\R^n$ and is visualised in $\R^2$ via \texttt{cmdscale}.}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- behavioural vs VIC for \texttt{cs}}
+  \centering
+  \includegraphics[width=0.95\textwidth,height=0.62\textheight,keepaspectratio]{../figures/vic/mds_compare_cs.pdf}\\[0.5ex]
+  \footnotesize
+  \begin{itemize}
+    \item Family separation (\texttt{nnet} vs \texttt{tree}) survives the switch to VIC.
+    \item Tree's behavioural bimodality (Slide~9: MDS\,1 $\approx 8$ cluster + diffuse cloud) is \emph{absent} in VIC --- trees form a continuous diagonal in importance space.
+    \item I.e.\ the two behavioural tree modes share the same importance profile.
+  \end{itemize}
+\end{frame}
+
+% -----------------------------------------------------------------
+\begin{frame}{Backup --- behavioural vs VIC for \texttt{gc}}
+  \centering
+  \includegraphics[width=0.95\textwidth,height=0.7\textheight,keepaspectratio]{../figures/vic/mds_compare_gc.pdf}\\[0.5ex]
+  \footnotesize \texttt{svm} tight cluster, \texttt{xgb} broad scatter --- family-level structure is preserved cleanly in both views.
 \end{frame}
 
 \end{document}
