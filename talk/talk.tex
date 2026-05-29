@@ -230,7 +230,7 @@
 % -----------------------------------------------------------------
 \begin{frame}{Behavioural vs VIC --- what we see}
   \begin{itemize}
-    \item \texttt{gc}: family-level structure preserved cleanly in both views.
+    \item \texttt{gc}: family separation largely preserved in both views, though a handful of \texttt{xgb} points overlap the \texttt{svm} cluster in VIC.
     \item \texttt{cs}: family separation preserved, but the within-family behavioural bimodality of trees (Slide~9) \textbf{vanishes} on the importance side.
     \item \texttt{bs}: single family in $\Rset$ --- uninformative.
     \item \texttt{st}: behavioural family separation \textbf{collapses} in VIC --- \texttt{nnet} and \texttt{svm} share the same importance profile despite predicting very differently.
