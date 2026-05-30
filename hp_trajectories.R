@@ -111,19 +111,29 @@ for (task_name in names(preds_by_task)) {
       next
     }
 
+    # Filter to HPs that (a) are scalar per model -- vector-valued HPs like
+    # class.weights would flatten to a different length than fam_mds1 and
+    # break plotting; (b) actually vary across the family.
     hp_cols <- names(hp_df)[vapply(names(hp_df), function(cn) {
-      vals <- unlist(hp_df[[cn]])
+      raw <- hp_df[[cn]]
+      if (any(lengths(raw) > 1)) return(FALSE)
+      vals <- unlist(raw)
       length(unique(vals[!is.na(vals)])) > 1
     }, logical(1))]
 
     if (length(hp_cols) == 0) {
       message(task_name, " / ", learner,
-              ": no varying HPs in this family -- skipping")
+              ": no varying scalar HPs in this family -- skipping")
       next
     }
 
     message(task_name, " / ", learner, ": plotting ", length(hp_cols),
             " HP(s) for ", n_fam, " models")
+
+    # Pad NULL / length-0 entries with NA so length(val) == n_fam after unlist
+    scalar_col <- function(raw) {
+      unlist(lapply(raw, function(x) if (length(x) == 0) NA else x))
+    }
 
     n_per_row <- min(3, length(hp_cols))
     n_panel_rows <- ceiling(length(hp_cols) / n_per_row)
@@ -131,7 +141,7 @@ for (task_name in names(preds_by_task)) {
         width = 4 * n_per_row, height = 4 * n_panel_rows)
     par(mfrow = c(n_panel_rows, n_per_row), mar = c(4.2, 4.2, 2.5, 1))
     for (hp in hp_cols) {
-      val <- unlist(hp_df[[hp]])
+      val <- scalar_col(hp_df[[hp]])
       if (is.factor(val) || is.character(val) || is.logical(val)) {
         plot(factor(val), fam_mds1,
              xlab = hp, ylab = "MDS 1 (within-family)",
