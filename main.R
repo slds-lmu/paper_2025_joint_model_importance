@@ -5,8 +5,12 @@ source("init.R")
 preds_cache_location <- "data/preds_cache.rds"
 figures_dir          <- "figures"
 
-# Rashomon set epsilon
+# Rashomon set epsilon. The floor is an absolute fallback for tasks where
+# best_score ~ 0 (e.g. cr, mk) -- without it best * epsilon collapses to
+# zero and no model qualifies. For tasks with non-trivial best scores the
+# relative term dominates and the floor is inactive.
 RS_epsilon       <- 0.01
+RS_epsilon_floor <- 0.005
 distance_metrics <- c("euclidean", "manhattan")
 
 dir.create(figures_dir, showWarnings = FALSE)
@@ -20,7 +24,7 @@ dir.create(figures_dir, showWarnings = FALSE)
 performance <- build_performance_from_res_dt(res_dt,
                                               tasks    = names(vic),
                                               learners = learner.keys)
-RS <- get_RS(RS_epsilon, performance, vic)
+RS <- get_RS(RS_epsilon, performance, vic, epsilon_floor = RS_epsilon_floor)
 
 # Rashomon-set composition per task, useful sanity check
 message("Learner set (auto-detected from VIC): ",

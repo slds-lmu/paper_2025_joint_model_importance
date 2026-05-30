@@ -70,7 +70,13 @@ build_performance_from_res_dt = function(res_dt, tasks = NULL, learners = NULL) 
 # subset either object.
 #
 # A model is in the Rashomon set when its test score is strictly below
-#   best_performance(task) * (1 + epsilon).
+#   best + max(best * epsilon, epsilon_floor).
+# The floor exists because for tasks where the best score is ~0 (perfect
+# classification on cr / mk) the multiplicative threshold collapses to 0
+# and effectively no model gets into the RS. The floor sets a minimum
+# absolute tolerance so those tasks degrade gracefully. For tasks with
+# non-trivial best scores the relative term dominates the floor and the
+# RS is the usual relative-epsilon set.
 #
 # We walk the VIC columns directly and look the matching score up in
 # `performance` by (learner, model.no) parsed from the column name. This
@@ -80,7 +86,7 @@ build_performance_from_res_dt = function(res_dt, tasks = NULL, learners = NULL) 
 #   - tasks where vic has fewer learners than the global learner.keys
 #   - performance vector longer than the corresponding vic block (surplus
 #     model.no's simply aren't iterated over)
-get_RS = function(epsilon, performance, vic) {
+get_RS = function(epsilon, performance, vic, epsilon_floor = 0) {
   # min(numeric(0)) is Inf with a warning -- harmless when a learner had
   # no models for some task, but the warnings are noisy.
   best_performance = suppressWarnings(apply(sapply(performance, sapply, min), 2, min))
@@ -88,7 +94,8 @@ get_RS = function(epsilon, performance, vic) {
 
   model_index_RS = list()
   for (task.key in task.keys) {
-    threshold  = best_performance[task.key] * (1 + epsilon)
+    best       = best_performance[task.key]
+    threshold  = best + max(best * epsilon, epsilon_floor)
     vic_cnames = colnames(vic[[task.key]])[-1]   # drop feature column
     if (length(vic_cnames) == 0) {
       model_index_RS[[task.key]] = integer(0)

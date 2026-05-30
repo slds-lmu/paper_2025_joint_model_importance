@@ -28,6 +28,7 @@ figures_dir          <- "figures"
 vic_dir              <- file.path(figures_dir, "vic")
 
 RS_epsilon       <- 0.01
+RS_epsilon_floor <- 0.005
 distance_metrics <- c("euclidean", "manhattan")
 
 dir.create(vic_dir, showWarnings = FALSE, recursive = TRUE)
@@ -36,7 +37,7 @@ dir.create(vic_dir, showWarnings = FALSE, recursive = TRUE)
 performance <- build_performance_from_res_dt(res_dt,
                                               tasks    = names(vic),
                                               learners = learner.keys)
-RS <- get_RS(RS_epsilon, performance, vic)
+RS <- get_RS(RS_epsilon, performance, vic, epsilon_floor = RS_epsilon_floor)
 
 # Optional: behavioural prediction cache, used for the comparison plot
 preds_by_task <- if (file.exists(preds_cache_location)) {
